@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import Landing from "./Landing";
 import Product from "./Product";
@@ -29,6 +30,7 @@ import RefundPolicy from "./RefundPolicy";
 import ShippingPolicy from "./ShippingPolicy";
 import TermsOfService from "./TermsOfService";
 import { HelmetProvider } from "react-helmet-async";
+import { BASE_URL } from "./services/api";
 
 function Layout() {
   const location = useLocation();
@@ -109,6 +111,11 @@ function Layout() {
 }
 
 export default function App() {
+  // Wake up the Render backend on app load (prevents ERR_SOCKET_NOT_CONNECTED)
+  useEffect(() => {
+    fetch(BASE_URL).catch(() => console.log("Backend wake-up ping sent"));
+  }, []);
+
   return (
     <HelmetProvider>
       <ToastProvider>
