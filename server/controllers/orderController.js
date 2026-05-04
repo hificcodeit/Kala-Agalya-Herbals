@@ -78,20 +78,11 @@ exports.initiatePhonePe = async (req, res) => {
     const xVerifyHeader = sha256 + "###" + process.env.PHONEPE_SALT_INDEX;
 
     // ── 6. Build endpoint URL ────────────────────────────────────────────
-    // Strip everything from /pg/v1/pay onwards in case the env var already includes it
-    // Then re-append the correct path. Handles env values like:
-    //   https://api.phonepe.com/apis/pg              ✅ base only
-    //   https://api.phonepe.com/apis/hermes/pg/v1/pay ❌ wrong path (hermes is old)
-    //   https://api.phonepe.com/apis/pg/v1/pay       ⚠️  already has path
-    let rawApiUrl = process.env.PHONEPE_API_URL;
-    // Remove any /pg/v1/pay suffix
-    rawApiUrl = rawApiUrl.replace(/\/pg\/v1\/pay.*$/, "");
-    // Remove /hermes path segment if present (old non-standard path)
-    rawApiUrl = rawApiUrl.replace(/\/hermes/, "");
-    // Remove trailing slash
-    rawApiUrl = rawApiUrl.replace(/\/$/, "");
-    // Now safely append the correct endpoint
-    const phonePeUrl = rawApiUrl + "/pg/v1/pay";
+    let baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
+    if (baseUrl.endsWith("/pg/v1/pay")) {
+      baseUrl = baseUrl.replace(/\/pg\/v1\/pay$/, "");
+    }
+    const phonePeUrl = baseUrl + "/pg/v1/pay";
 
     // ── 7. Debug logs (visible in Render dashboard) ──────────────────────
     console.log("=== PhonePe Initiation ===");
@@ -163,10 +154,10 @@ exports.phonePeConfigCheck = (req, res) => {
   });
 
   // Show the computed final URL that will actually be called
-  let rawUrl = process.env.PHONEPE_API_URL || "";
-  rawUrl = rawUrl.replace(/\/pg\/v1\/pay.*$/, "");
-  rawUrl = rawUrl.replace(/\/hermes/, "");
-  rawUrl = rawUrl.replace(/\/$/, "");
+  let rawUrl = (process.env.PHONEPE_API_URL || "").replace(/\/$/, "");
+  if (rawUrl.endsWith("/pg/v1/pay")) {
+    rawUrl = rawUrl.replace(/\/pg\/v1\/pay$/, "");
+  }
   result["COMPUTED_PHONEPE_PAY_URL"] = rawUrl ? rawUrl + "/pg/v1/pay" : "❌ Cannot compute (PHONEPE_API_URL missing)";
 
   let clientUrl = process.env.CLIENT_URL || "";
@@ -191,11 +182,11 @@ exports.checkStatus = async (req, res) => {
         const sha256 = crypto.createHash("sha256").update(stringToHash).digest("hex");
         const xVerifyHeader = sha256 + "###" + saltIndex;
     
-        // Normalize the base URL (same logic as initiatePhonePe)
-        let baseUrl = process.env.PHONEPE_API_URL;
-        baseUrl = baseUrl.replace(/\/pg\/v1\/pay.*$/, ""); // strip /pg/v1/pay suffix
-        baseUrl = baseUrl.replace(/\/hermes/, "");         // strip /hermes if present
-        baseUrl = baseUrl.replace(/\/$/, "");              // strip trailing slash
+        // Normalize the base URL
+        let baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
+        if (baseUrl.endsWith("/pg/v1/pay")) {
+            baseUrl = baseUrl.replace(/\/pg\/v1\/pay$/, "");
+        }
         const checkUrl = `${baseUrl}/pg/v1/status/${merchantId}/${merchantTransactionId}`;
     
         const response = await fetch(checkUrl, {
