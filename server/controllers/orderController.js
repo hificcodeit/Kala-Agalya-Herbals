@@ -24,102 +24,130 @@ exports.initiatePhonePe = async (req, res) => {
   try {
     const { orderId } = req.body;
 
-    // Validate required env vars upfront
-    const missingVars = ["PHONEPE_MERCHANT_ID", "PHONEPE_SALT_KEY", "PHONEPE_SALT_INDEX", "PHONEPE_API_URL"].filter(v => !process.env[v]);
+    // ── 1. Validate required env vars ────────────────────────────────────
+    const missingVars = ["PHONEPE_MERCHANT_ID", "PHONEPE_SALT_KEY", "PHONEPE_SALT_INDEX", "PHONEPE_API_URL"]
+      .filter(v => !process.env[v]);
     if (missingVars.length > 0) {
       console.error("PhonePe: Missing env vars:", missingVars);
       return res.status(500).json({ success: false, message: `Missing server config: ${missingVars.join(", ")}` });
     }
 
+    // ── 2. Load order ────────────────────────────────────────────────────
     const order = await Order.findById(orderId);
-
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-    const merchantTransactionId = order._id.toString();
-    const rawId = (order.customer.email || order.customer.name || "user");
-    const merchantUserId = rawId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 30);
-    const amountInPaise = Math.round(order.totalAmount * 100);
+    // ── 3. Build IDs & amount ────────────────────────────────────────────
+    // PhonePe requires: alphanumeric + hyphens/underscores, max 38 chars
+    // Prefix with 'T' so it's never purely numeric
+    const merchantTransactionId = "T" + order._id.toString();
 
-    // Guard against zero/missing amount
+    const rawId = (order.customer.email || order.customer.name || "user");
+    const merchantUserId = "U" + rawId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 29);
+
+    const amountInPaise = Math.round(order.totalAmount * 100);
     if (!amountInPaise || amountInPaise <= 0) {
       console.error("PhonePe: Invalid amount. totalAmount =", order.totalAmount);
       return res.status(400).json({ success: false, message: "Order total amount is invalid (zero or missing)" });
     }
 
+    // ── 4. Build payload ─────────────────────────────────────────────────
+    const clientUrl = (process.env.CLIENT_URL || "https://kalaagalyaherbals.in").replace(/\/$/, "");
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
-      merchantTransactionId: merchantTransactionId,
-      merchantUserId: merchantUserId,
-      amount: amountInPaise, // in paise
-      redirectUrl: `${process.env.CLIENT_URL || "https://kalaagalyaherbals.in"}/success?transactionId=${merchantTransactionId}`,
+      merchantTransactionId,
+      merchantUserId,
+      amount: amountInPaise,
+      redirectUrl: `${clientUrl}/success?transactionId=${merchantTransactionId}`,
       redirectMode: "REDIRECT",
-      callbackUrl: process.env.PHONEPE_CALLBACK_URL,
-      paymentInstrument: {
-        type: "PAY_PAGE"
-      }
+      mobileNumber: order.customer.phone || undefined,
+      paymentInstrument: { type: "PAY_PAGE" }
     };
+    // Only include callbackUrl if it is defined
+    if (process.env.PHONEPE_CALLBACK_URL) {
+      payload.callbackUrl = process.env.PHONEPE_CALLBACK_URL;
+    }
 
-    // Debug log — visible in Render logs
-    console.log("=== PhonePe Initiation Debug ===");
-    console.log("Merchant ID:", process.env.PHONEPE_MERCHANT_ID);
-    console.log("Salt Index:", process.env.PHONEPE_SALT_INDEX);
-    console.log("API URL (before append):", process.env.PHONEPE_API_URL);
-    console.log("Amount (paise):", amountInPaise);
-    console.log("merchantTransactionId:", merchantTransactionId);
-    console.log("merchantUserId:", merchantUserId);
-
+    // ── 5. Sign the payload ──────────────────────────────────────────────
     const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-    const stringToHash = base64Payload + "/pg/v1/pay" + process.env.PHONEPE_SALT_KEY;
-    const sha256 = crypto.createHash("sha256").update(stringToHash).digest("hex");
+    const stringToHash  = base64Payload + "/pg/v1/pay" + process.env.PHONEPE_SALT_KEY;
+    const sha256        = crypto.createHash("sha256").update(stringToHash).digest("hex");
     const xVerifyHeader = sha256 + "###" + process.env.PHONEPE_SALT_INDEX;
 
-    let phonePeUrl = process.env.PHONEPE_API_URL;
+    // ── 6. Build endpoint URL ────────────────────────────────────────────
+    let phonePeUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
     if (!phonePeUrl.endsWith("/pg/v1/pay")) {
-      phonePeUrl = phonePeUrl.replace(/\/$/, "") + "/pg/v1/pay";
+      phonePeUrl = phonePeUrl + "/pg/v1/pay";
     }
-    console.log("Final PhonePe URL:", phonePeUrl);
 
+    // ── 7. Debug logs (visible in Render dashboard) ──────────────────────
+    console.log("=== PhonePe Initiation ===");
+    console.log("  Merchant ID       :", process.env.PHONEPE_MERCHANT_ID);
+    console.log("  Salt Index        :", process.env.PHONEPE_SALT_INDEX);
+    console.log("  Final URL         :", phonePeUrl);
+    console.log("  Amount (paise)    :", amountInPaise);
+    console.log("  merchantTxnId     :", merchantTransactionId);
+    console.log("  merchantUserId    :", merchantUserId);
+    console.log("  Payload (decoded) :", JSON.stringify(payload));
+
+    // ── 8. Call PhonePe ──────────────────────────────────────────────────
     const response = await fetch(phonePeUrl, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "X-VERIFY": xVerifyHeader,
-        "accept": "application/json"
+        "Content-Type" : "application/json",
+        "X-VERIFY"     : xVerifyHeader,
+        "accept"       : "application/json"
       },
       body: JSON.stringify({ request: base64Payload })
     });
 
     const rawText = await response.text();
-    console.log("PhonePe raw response (status", response.status, "):", rawText);
-    
-    let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch(e) {
-      return res.status(500).json({ success: false, message: "PhonePe returned non-JSON: " + rawText.slice(0, 200) });
-    }
-    
-    console.log("PhonePe parsed response:", JSON.stringify(data, null, 2));
+    console.log("PhonePe HTTP status:", response.status);
+    console.log("PhonePe raw response:", rawText);
 
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch(e) {
+      return res.status(500).json({ success: false, message: "PhonePe returned non-JSON: " + rawText.slice(0, 300) });
+    }
+
+    // ── 9. Return result ─────────────────────────────────────────────────
     if (data.success && data.data && data.data.instrumentResponse) {
-      res.json({
+      // Update the order with the transaction ID we used
+      await Order.findByIdAndUpdate(orderId, { paymentId: merchantTransactionId });
+      return res.json({
         success: true,
-        redirectUrl: data.data.instrumentResponse.redirectInfo.url,
-      });
-    } else {
-      // Return full PhonePe error details for easier debugging
-      res.status(400).json({ 
-        success: false, 
-        message: data.message || "Init failed",
-        code: data.code,
-        phonePeData: data.data || null
+        redirectUrl: data.data.instrumentResponse.redirectInfo.url
       });
     }
+
+    // PhonePe returned failure — surface the full details
+    console.error("PhonePe refused payment:", JSON.stringify(data));
+    return res.status(400).json({
+      success: false,
+      message: data.message || "Init failed",
+      code: data.code || null,
+      phonePeData: data.data || null
+    });
 
   } catch (err) {
     console.error("PhonePe Initiation Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
+};
+
+/**
+ * Config Check — verify PhonePe env vars are loaded (safe diagnostic)
+ */
+exports.phonePeConfigCheck = (req, res) => {
+  const vars = ["PHONEPE_MERCHANT_ID", "PHONEPE_SALT_KEY", "PHONEPE_SALT_INDEX", "PHONEPE_API_URL", "PHONEPE_CALLBACK_URL", "CLIENT_URL"];
+  const result = {};
+  vars.forEach(v => {
+    const val = process.env[v];
+    if (!val) result[v] = "❌ MISSING";
+    else if (v.includes("SALT_KEY")) result[v] = "✅ SET (hidden)";
+    else result[v] = "✅ " + val;
+  });
+  res.json({ env: result });
 };
 
 /**
