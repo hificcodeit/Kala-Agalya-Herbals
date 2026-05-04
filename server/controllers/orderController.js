@@ -82,6 +82,10 @@ exports.initiatePhonePe = async (req, res) => {
     if (baseUrl.endsWith("/pg/v1/pay")) {
       baseUrl = baseUrl.replace(/\/pg\/v1\/pay$/, "");
     }
+    // Auto-correct my previous bad advice if they set it to /apis/pg
+    if (baseUrl === "https://api.phonepe.com/apis/pg") {
+      baseUrl = "https://api.phonepe.com/apis/hermes";
+    }
     const phonePeUrl = baseUrl + "/pg/v1/pay";
 
     // ── 7. Debug logs (visible in Render dashboard) ──────────────────────
@@ -158,6 +162,9 @@ exports.phonePeConfigCheck = (req, res) => {
   if (rawUrl.endsWith("/pg/v1/pay")) {
     rawUrl = rawUrl.replace(/\/pg\/v1\/pay$/, "");
   }
+  if (rawUrl === "https://api.phonepe.com/apis/pg") {
+    rawUrl = "https://api.phonepe.com/apis/hermes";
+  }
   result["COMPUTED_PHONEPE_PAY_URL"] = rawUrl ? rawUrl + "/pg/v1/pay" : "❌ Cannot compute (PHONEPE_API_URL missing)";
 
   let clientUrl = process.env.CLIENT_URL || "";
@@ -186,6 +193,9 @@ exports.checkStatus = async (req, res) => {
         let baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
         if (baseUrl.endsWith("/pg/v1/pay")) {
             baseUrl = baseUrl.replace(/\/pg\/v1\/pay$/, "");
+        }
+        if (baseUrl === "https://api.phonepe.com/apis/pg") {
+            baseUrl = "https://api.phonepe.com/apis/hermes";
         }
         const checkUrl = `${baseUrl}/pg/v1/status/${merchantId}/${merchantTransactionId}`;
     
