@@ -23,6 +23,14 @@ exports.createOrder = async (req, res) => {
 exports.initiatePhonePe = async (req, res) => {
   try {
     const { orderId } = req.body;
+
+    // Validate required env vars upfront
+    const missingVars = ["PHONEPE_MERCHANT_ID", "PHONEPE_SALT_KEY", "PHONEPE_SALT_INDEX", "PHONEPE_API_URL"].filter(v => !process.env[v]);
+    if (missingVars.length > 0) {
+      console.error("PhonePe: Missing env vars:", missingVars);
+      return res.status(500).json({ success: false, message: `Missing server config: ${missingVars.join(", ")}` });
+    }
+
     const order = await Order.findById(orderId);
 
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
@@ -30,19 +38,35 @@ exports.initiatePhonePe = async (req, res) => {
     const merchantTransactionId = order._id.toString();
     const rawId = (order.customer.email || order.customer.name || "user");
     const merchantUserId = rawId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 30);
+    const amountInPaise = Math.round(order.totalAmount * 100);
+
+    // Guard against zero/missing amount
+    if (!amountInPaise || amountInPaise <= 0) {
+      console.error("PhonePe: Invalid amount. totalAmount =", order.totalAmount);
+      return res.status(400).json({ success: false, message: "Order total amount is invalid (zero or missing)" });
+    }
 
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
       merchantTransactionId: merchantTransactionId,
       merchantUserId: merchantUserId,
-      amount: Math.round(order.totalAmount * 100), // in paise
-      redirectUrl: `${process.env.CLIENT_URL || "https://kalaagalyaherbals.in"}/success?transactionId=${merchantTransactionId}`, // Redirect here after payment
+      amount: amountInPaise, // in paise
+      redirectUrl: `${process.env.CLIENT_URL || "https://kalaagalyaherbals.in"}/success?transactionId=${merchantTransactionId}`,
       redirectMode: "REDIRECT",
       callbackUrl: process.env.PHONEPE_CALLBACK_URL,
       paymentInstrument: {
         type: "PAY_PAGE"
       }
     };
+
+    // Debug log — visible in Render logs
+    console.log("=== PhonePe Initiation Debug ===");
+    console.log("Merchant ID:", process.env.PHONEPE_MERCHANT_ID);
+    console.log("Salt Index:", process.env.PHONEPE_SALT_INDEX);
+    console.log("API URL (before append):", process.env.PHONEPE_API_URL);
+    console.log("Amount (paise):", amountInPaise);
+    console.log("merchantTransactionId:", merchantTransactionId);
+    console.log("merchantUserId:", merchantUserId);
 
     const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
     const stringToHash = base64Payload + "/pg/v1/pay" + process.env.PHONEPE_SALT_KEY;
@@ -53,6 +77,7 @@ exports.initiatePhonePe = async (req, res) => {
     if (!phonePeUrl.endsWith("/pg/v1/pay")) {
       phonePeUrl = phonePeUrl.replace(/\/$/, "") + "/pg/v1/pay";
     }
+    console.log("Final PhonePe URL:", phonePeUrl);
 
     const response = await fetch(phonePeUrl, {
       method: "POST",
