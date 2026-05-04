@@ -51,7 +51,11 @@ exports.initiatePhonePe = async (req, res) => {
     }
 
     // ── 4. Build payload ─────────────────────────────────────────────────
-    const clientUrl = (process.env.CLIENT_URL || "https://kalaagalyaherbals.in").replace(/\/$/, "");
+    // Fix CLIENT_URL — if it's still localhost, use the real domain
+    let clientUrl = (process.env.CLIENT_URL || "https://www.kalaagalyaherbals.in").replace(/\/$/, "");
+    if (clientUrl.includes("localhost")) {
+      clientUrl = "https://www.kalaagalyaherbals.in";
+    }
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
       merchantTransactionId,
@@ -74,10 +78,20 @@ exports.initiatePhonePe = async (req, res) => {
     const xVerifyHeader = sha256 + "###" + process.env.PHONEPE_SALT_INDEX;
 
     // ── 6. Build endpoint URL ────────────────────────────────────────────
-    let phonePeUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
-    if (!phonePeUrl.endsWith("/pg/v1/pay")) {
-      phonePeUrl = phonePeUrl + "/pg/v1/pay";
-    }
+    // Strip everything from /pg/v1/pay onwards in case the env var already includes it
+    // Then re-append the correct path. Handles env values like:
+    //   https://api.phonepe.com/apis/pg              ✅ base only
+    //   https://api.phonepe.com/apis/hermes/pg/v1/pay ❌ wrong path (hermes is old)
+    //   https://api.phonepe.com/apis/pg/v1/pay       ⚠️  already has path
+    let rawApiUrl = process.env.PHONEPE_API_URL;
+    // Remove any /pg/v1/pay suffix
+    rawApiUrl = rawApiUrl.replace(/\/pg\/v1\/pay.*$/, "");
+    // Remove /hermes path segment if present (old non-standard path)
+    rawApiUrl = rawApiUrl.replace(/\/hermes/, "");
+    // Remove trailing slash
+    rawApiUrl = rawApiUrl.replace(/\/$/, "");
+    // Now safely append the correct endpoint
+    const phonePeUrl = rawApiUrl + "/pg/v1/pay";
 
     // ── 7. Debug logs (visible in Render dashboard) ──────────────────────
     console.log("=== PhonePe Initiation ===");
@@ -147,6 +161,19 @@ exports.phonePeConfigCheck = (req, res) => {
     else if (v.includes("SALT_KEY")) result[v] = "✅ SET (hidden)";
     else result[v] = "✅ " + val;
   });
+
+  // Show the computed final URL that will actually be called
+  let rawUrl = process.env.PHONEPE_API_URL || "";
+  rawUrl = rawUrl.replace(/\/pg\/v1\/pay.*$/, "");
+  rawUrl = rawUrl.replace(/\/hermes/, "");
+  rawUrl = rawUrl.replace(/\/$/, "");
+  result["COMPUTED_PHONEPE_PAY_URL"] = rawUrl ? rawUrl + "/pg/v1/pay" : "❌ Cannot compute (PHONEPE_API_URL missing)";
+
+  let clientUrl = process.env.CLIENT_URL || "";
+  if (!clientUrl || clientUrl.includes("localhost")) {
+    result["CLIENT_URL_WARNING"] = "⚠️ CLIENT_URL is localhost or missing — redirects will fail! Set it to https://www.kalaagalyaherbals.in";
+  }
+
   res.json({ env: result });
 };
 
@@ -164,12 +191,11 @@ exports.checkStatus = async (req, res) => {
         const sha256 = crypto.createHash("sha256").update(stringToHash).digest("hex");
         const xVerifyHeader = sha256 + "###" + saltIndex;
     
+        // Normalize the base URL (same logic as initiatePhonePe)
         let baseUrl = process.env.PHONEPE_API_URL;
-        if (baseUrl.endsWith("/pg/v1/pay")) {
-            baseUrl = baseUrl.replace("/pg/v1/pay", "");
-        } else {
-            baseUrl = baseUrl.replace(/\/$/, "");
-        }
+        baseUrl = baseUrl.replace(/\/pg\/v1\/pay.*$/, ""); // strip /pg/v1/pay suffix
+        baseUrl = baseUrl.replace(/\/hermes/, "");         // strip /hermes if present
+        baseUrl = baseUrl.replace(/\/$/, "");              // strip trailing slash
         const checkUrl = `${baseUrl}/pg/v1/status/${merchantId}/${merchantTransactionId}`;
     
         const response = await fetch(checkUrl, {
