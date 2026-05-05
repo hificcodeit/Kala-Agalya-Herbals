@@ -78,15 +78,7 @@ exports.initiatePhonePe = async (req, res) => {
     const baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
     const phonePeUrl = baseUrl + "/pg/v1/pay";
 
-    // ── 7. Debug logs (visible in Render dashboard) ──────────────────────
-    console.log("=== PhonePe Initiation ===");
-    console.log("  Merchant ID       :", process.env.PHONEPE_MERCHANT_ID);
-    console.log("  Salt Index        :", process.env.PHONEPE_SALT_INDEX);
-    console.log("  Final URL         :", phonePeUrl);
-    console.log("  Amount (paise)    :", amountInPaise);
-    console.log("  merchantTxnId     :", merchantTransactionId);
-    console.log("  merchantUserId    :", merchantUserId);
-    console.log("  Payload (decoded) :", JSON.stringify(payload));
+    // ── 7. Debug logs (Removed for production) ───────────────────────────
 
     // ── 8. Call PhonePe ──────────────────────────────────────────────────
     const response = await fetch(phonePeUrl, {
@@ -190,7 +182,8 @@ exports.checkStatus = async (req, res) => {
         const data = await response.json();
     
         if (data.success && data.code === "PAYMENT_SUCCESS") {
-          await Order.findByIdAndUpdate(merchantTransactionId, {
+          const orderId = merchantTransactionId.startsWith("T") ? merchantTransactionId.slice(1) : merchantTransactionId;
+          await Order.findByIdAndUpdate(orderId, {
             paymentStatus: "PAID",
             paymentId: data.data.transactionId
           });
@@ -210,7 +203,9 @@ exports.checkStatus = async (req, res) => {
  */
 exports.getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const rawId = req.params.id;
+    const orderId = rawId.startsWith("T") ? rawId.slice(1) : rawId;
+    const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
     res.json({ success: true, order });
   } catch (err) {
