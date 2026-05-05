@@ -51,11 +51,8 @@ exports.initiatePhonePe = async (req, res) => {
     }
 
     // ── 4. Build payload ─────────────────────────────────────────────────
-    // Fix CLIENT_URL — if it's still localhost, use the real domain
-    let clientUrl = (process.env.CLIENT_URL || "https://www.kalaagalyaherbals.in").replace(/\/$/, "");
-    if (clientUrl.includes("localhost")) {
-      clientUrl = "https://www.kalaagalyaherbals.in";
-    }
+    // Use CLIENT_URL from .env
+    let clientUrl = process.env.CLIENT_URL.replace(/\/$/, "");
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
       merchantTransactionId,
@@ -78,14 +75,7 @@ exports.initiatePhonePe = async (req, res) => {
     const xVerifyHeader = sha256 + "###" + process.env.PHONEPE_SALT_INDEX;
 
     // ── 6. Build endpoint URL ────────────────────────────────────────────
-    let baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
-    if (baseUrl.endsWith("/pg/v1/pay")) {
-      baseUrl = baseUrl.replace(/\/pg\/v1\/pay$/, "");
-    }
-    // Auto-correct my previous bad advice if they set it to /apis/pg
-    if (baseUrl === "https://api.phonepe.com/apis/pg") {
-      baseUrl = "https://api.phonepe.com/apis/hermes";
-    }
+    const baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
     const phonePeUrl = baseUrl + "/pg/v1/pay";
 
     // ── 7. Debug logs (visible in Render dashboard) ──────────────────────
@@ -158,18 +148,12 @@ exports.phonePeConfigCheck = (req, res) => {
   });
 
   // Show the computed final URL that will actually be called
-  let rawUrl = (process.env.PHONEPE_API_URL || "").replace(/\/$/, "");
-  if (rawUrl.endsWith("/pg/v1/pay")) {
-    rawUrl = rawUrl.replace(/\/pg\/v1\/pay$/, "");
-  }
-  if (rawUrl === "https://api.phonepe.com/apis/pg") {
-    rawUrl = "https://api.phonepe.com/apis/hermes";
-  }
+  const rawUrl = (process.env.PHONEPE_API_URL || "").replace(/\/$/, "");
   result["COMPUTED_PHONEPE_PAY_URL"] = rawUrl ? rawUrl + "/pg/v1/pay" : "❌ Cannot compute (PHONEPE_API_URL missing)";
 
   let clientUrl = process.env.CLIENT_URL || "";
-  if (!clientUrl || clientUrl.includes("localhost")) {
-    result["CLIENT_URL_WARNING"] = "⚠️ CLIENT_URL is localhost or missing — redirects will fail! Set it to https://www.kalaagalyaherbals.in";
+  if (!clientUrl) {
+    result["CLIENT_URL_WARNING"] = "⚠️ CLIENT_URL is missing — redirects will fail!";
   }
 
   res.json({ env: result });
@@ -189,14 +173,8 @@ exports.checkStatus = async (req, res) => {
         const sha256 = crypto.createHash("sha256").update(stringToHash).digest("hex");
         const xVerifyHeader = sha256 + "###" + saltIndex;
     
-        // Normalize the base URL
-        let baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
-        if (baseUrl.endsWith("/pg/v1/pay")) {
-            baseUrl = baseUrl.replace(/\/pg\/v1\/pay$/, "");
-        }
-        if (baseUrl === "https://api.phonepe.com/apis/pg") {
-            baseUrl = "https://api.phonepe.com/apis/hermes";
-        }
+        // Build status URL
+        const baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
         const checkUrl = `${baseUrl}/pg/v1/status/${merchantId}/${merchantTransactionId}`;
     
         const response = await fetch(checkUrl, {

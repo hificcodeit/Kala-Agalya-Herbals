@@ -8,7 +8,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Sign JWT token
 const signToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || "fallback_secret", {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "30d",
   });
 };
@@ -305,7 +305,7 @@ exports.forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // 4. Build the reset URL (raw token goes in the link, NOT the hashed one)
-    const clientBaseUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientBaseUrl = process.env.CLIENT_URL;
     const resetUrl = `${clientBaseUrl}/reset-password/${resetToken}`;
 
     // 5. Check if email is configured
