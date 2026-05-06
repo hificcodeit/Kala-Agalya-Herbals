@@ -18,6 +18,36 @@ exports.createOrder = async (req, res) => {
 };
 
 /**
+ * Get PhonePe V2 Auth Token
+ */
+async function getPhonePeToken() {
+  const clientId = process.env.PHONEPE_CLIENT_ID;
+  const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
+  const isProd = process.env.PHONEPE_ENV === "PRODUCTION";
+  
+  const authUrl = isProd 
+    ? "https://api.phonepe.com/apis/identity-manager/v1/oauth/token"
+    : "https://api-preprod.phonepe.com/apis/pg-sandbox/identity-manager/v1/oauth/token";
+
+  const params = new URLSearchParams();
+  params.append('grant_type', 'client_credentials');
+  params.append('client_id', clientId);
+  params.append('client_secret', clientSecret);
+
+  const response = await fetch(authUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params
+  });
+  
+  const data = await response.json();
+  if (!response.ok || !data.access_token) {
+    throw new Error(`PhonePe Auth failed: ${JSON.stringify(data)}`);
+  }
+  return data.access_token;
+}
+
+/**
  * Initiate PhonePe Payment (from Payment Page)
  */
 exports.initiatePhonePe = async (req, res) => {
@@ -25,7 +55,7 @@ exports.initiatePhonePe = async (req, res) => {
     const { orderId } = req.body;
 
     // ── 1. Validate required env vars ────────────────────────────────────
-    const missingVars = ["PHONEPE_MERCHANT_ID", "PHONEPE_SALT_KEY", "PHONEPE_SALT_INDEX", "PHONEPE_API_URL"]
+    const missingVars = ["PHONEPE_MERCHANT_ID", "PHONEPE_CLIENT_ID", "PHONEPE_CLIENT_SECRET", "CLIENT_URL"]
       .filter(v => !process.env[v]);
     if (missingVars.length > 0) {
       console.error("PhonePe: Missing env vars:", missingVars);
@@ -37,87 +67,65 @@ exports.initiatePhonePe = async (req, res) => {
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
     // ── 3. Build IDs & amount ────────────────────────────────────────────
-    // PhonePe requires: alphanumeric + hyphens/underscores, max 38 chars
-    // Prefix with 'T' so it's never purely numeric
-    const merchantTransactionId = "T" + order._id.toString();
-
-    const rawId = (order.customer.email || order.customer.name || "user");
-    const merchantUserId = "U" + rawId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 29);
-
+    const merchantOrderId = "T" + order._id.toString();
     const amountInPaise = Math.round(order.totalAmount * 100);
     if (!amountInPaise || amountInPaise <= 0) {
-      console.error("PhonePe: Invalid amount. totalAmount =", order.totalAmount);
-      return res.status(400).json({ success: false, message: "Order total amount is invalid (zero or missing)" });
+      return res.status(400).json({ success: false, message: "Order total amount is invalid" });
     }
 
-    // ── 4. Build payload ─────────────────────────────────────────────────
-    // Use CLIENT_URL from .env
+    // ── 4. Build payload for V2 Checkout ─────────────────────────────────
     let clientUrl = process.env.CLIENT_URL.replace(/\/$/, "");
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
-      merchantTransactionId,
-      merchantUserId,
+      merchantOrderId: merchantOrderId,
       amount: amountInPaise,
-      redirectUrl: `${clientUrl}/success?transactionId=${merchantTransactionId}`,
-      redirectMode: "REDIRECT",
-      mobileNumber: order.customer.phone || undefined,
-      paymentInstrument: { type: "PAY_PAGE" }
+      paymentFlow: {
+        type: "PG_CHECKOUT",
+        message: "Payment for order",
+        merchantUrls: {
+          redirectUrl: `${clientUrl}/success?transactionId=${merchantOrderId}`
+        }
+      }
     };
-    // Only include callbackUrl if it is defined
-    if (process.env.PHONEPE_CALLBACK_URL) {
-      payload.callbackUrl = process.env.PHONEPE_CALLBACK_URL;
-    }
 
-    // ── 5. Sign the payload ──────────────────────────────────────────────
-    const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-    const stringToHash  = base64Payload + "/pg/v1/pay" + process.env.PHONEPE_SALT_KEY;
-    const sha256        = crypto.createHash("sha256").update(stringToHash).digest("hex");
-    const xVerifyHeader = sha256 + "###" + process.env.PHONEPE_SALT_INDEX;
+    // ── 5. Get OAuth Token and Call PhonePe ──────────────────────────────
+    const token = await getPhonePeToken();
+    const isProd = process.env.PHONEPE_ENV === "PRODUCTION";
+    const checkoutUrl = isProd 
+      ? "https://api.phonepe.com/apis/pg/checkout/v2/pay"
+      : "https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay";
 
-    // ── 6. Build endpoint URL ────────────────────────────────────────────
-    const baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
-    const phonePeUrl = baseUrl + "/pg/v1/pay";
-
-    // ── 7. Debug logs (Removed for production) ───────────────────────────
-
-    // ── 8. Call PhonePe ──────────────────────────────────────────────────
-    const response = await fetch(phonePeUrl, {
+    const response = await fetch(checkoutUrl, {
       method: "POST",
       headers: {
         "Content-Type" : "application/json",
-        "X-VERIFY"     : xVerifyHeader,
-        "accept"       : "application/json"
+        "Authorization": `O-Bearer ${token}`
       },
-      body: JSON.stringify({ request: base64Payload })
+      body: JSON.stringify(payload)
     });
 
     const rawText = await response.text();
-    console.log("PhonePe HTTP status:", response.status);
-    console.log("PhonePe raw response:", rawText);
-
     let data;
-    try { data = JSON.parse(rawText); }
-    catch(e) {
+    try { data = JSON.parse(rawText); } catch(e) {
       return res.status(500).json({ success: false, message: "PhonePe returned non-JSON: " + rawText.slice(0, 300) });
     }
 
-    // ── 9. Return result ─────────────────────────────────────────────────
-    if (data.success && data.data && data.data.instrumentResponse) {
-      // Update the order with the transaction ID we used
-      await Order.findByIdAndUpdate(orderId, { paymentId: merchantTransactionId });
-      return res.json({
-        success: true,
-        redirectUrl: data.data.instrumentResponse.redirectInfo.url
-      });
+    // ── 6. Return result ─────────────────────────────────────────────────
+    // V2 typically returns { redirectUrl: "...", state: "..." } at root or inside data
+    const redirectUrl = data.redirectUrl || (data.data && data.data.redirectUrl);
+    
+    if (response.ok && redirectUrl) {
+      await Order.findByIdAndUpdate(orderId, { paymentId: merchantOrderId });
+      return res.json({ success: true, redirectUrl });
     }
 
-    // PhonePe returned failure — surface the full details
+    // PhonePe returned failure
     console.error("PhonePe refused payment:", JSON.stringify(data));
     return res.status(400).json({
       success: false,
       message: data.message || "Init failed",
-      code: data.code || null,
-      phonePeData: data.data || null
+      code: data.code || response.status,
+      phonePeData: data
     });
 
   } catch (err) {
@@ -130,23 +138,19 @@ exports.initiatePhonePe = async (req, res) => {
  * Config Check — verify PhonePe env vars are loaded (safe diagnostic)
  */
 exports.phonePeConfigCheck = (req, res) => {
-  const vars = ["PHONEPE_MERCHANT_ID", "PHONEPE_SALT_KEY", "PHONEPE_SALT_INDEX", "PHONEPE_API_URL", "PHONEPE_CALLBACK_URL", "CLIENT_URL"];
+  const vars = ["PHONEPE_CLIENT_ID", "PHONEPE_CLIENT_SECRET", "PHONEPE_ENV", "CLIENT_URL"];
   const result = {};
   vars.forEach(v => {
     const val = process.env[v];
     if (!val) result[v] = "❌ MISSING";
-    else if (v.includes("SALT_KEY")) result[v] = "✅ SET (hidden)";
+    else if (v.includes("SECRET")) result[v] = "✅ SET (hidden)";
     else result[v] = "✅ " + val;
   });
 
-  // Show the computed final URL that will actually be called
-  const rawUrl = (process.env.PHONEPE_API_URL || "").replace(/\/$/, "");
-  result["COMPUTED_PHONEPE_PAY_URL"] = rawUrl ? rawUrl + "/pg/v1/pay" : "❌ Cannot compute (PHONEPE_API_URL missing)";
-
-  let clientUrl = process.env.CLIENT_URL || "";
-  if (!clientUrl) {
-    result["CLIENT_URL_WARNING"] = "⚠️ CLIENT_URL is missing — redirects will fail!";
-  }
+  const isProd = process.env.PHONEPE_ENV === "PRODUCTION";
+  result["COMPUTED_PHONEPE_PAY_URL"] = isProd 
+    ? "https://api.phonepe.com/apis/pg/checkout/v2/pay"
+    : "https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay";
 
   res.json({ env: result });
 };
@@ -157,39 +161,38 @@ exports.phonePeConfigCheck = (req, res) => {
 exports.checkStatus = async (req, res) => {
     try {
         const { merchantTransactionId } = req.params;
-        const merchantId = process.env.PHONEPE_MERCHANT_ID;
-        const saltKey = process.env.PHONEPE_SALT_KEY;
-        const saltIndex = process.env.PHONEPE_SALT_INDEX;
-    
-        const stringToHash = `/pg/v1/status/${merchantId}/${merchantTransactionId}` + saltKey;
-        const sha256 = crypto.createHash("sha256").update(stringToHash).digest("hex");
-        const xVerifyHeader = sha256 + "###" + saltIndex;
-    
-        // Build status URL
-        const baseUrl = process.env.PHONEPE_API_URL.replace(/\/$/, "");
-        const checkUrl = `${baseUrl}/pg/v1/status/${merchantId}/${merchantTransactionId}`;
+        const merchantOrderId = merchantTransactionId; // V2 uses merchantOrderId
+        
+        const token = await getPhonePeToken();
+        const isProd = process.env.PHONEPE_ENV === "PRODUCTION";
+        
+        // Build V2 status URL
+        const checkUrl = isProd 
+          ? `https://api.phonepe.com/apis/pg/checkout/v2/order/${merchantOrderId}/status`
+          : `https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/order/${merchantOrderId}/status`;
     
         const response = await fetch(checkUrl, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "X-VERIFY": xVerifyHeader,
-            "X-MERCHANT-ID": merchantId,
-            "accept": "application/json"
+            "Authorization": `O-Bearer ${token}`
           }
         });
     
         const data = await response.json();
+        
+        // V2 State is usually inside the main object or data.state
+        const state = data.state || (data.data && data.data.state);
     
-        if (data.success && data.code === "PAYMENT_SUCCESS") {
-          const orderId = merchantTransactionId.startsWith("T") ? merchantTransactionId.slice(1) : merchantTransactionId;
+        if (response.ok && (state === "COMPLETED" || state === "SUCCESS")) {
+          const orderId = merchantOrderId.startsWith("T") ? merchantOrderId.slice(1) : merchantOrderId;
           await Order.findByIdAndUpdate(orderId, {
             paymentStatus: "PAID",
-            paymentId: data.data.transactionId
+            paymentId: data.orderId || merchantOrderId
           });
           res.json({ success: true, message: "Payment Verified" });
         } else {
-          res.json({ success: false, message: data.message });
+          res.json({ success: false, message: data.message || "Payment not completed" });
         }
     
     } catch (error) {
