@@ -390,7 +390,7 @@ export default function UserProfile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fadeIn">
             {/* Display Mode */}
             <div className="space-y-8">
-              <div className="bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative group overflow-hidden">
+              <div className="scroll-animate scroll-fade-left bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative group overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 -mr-16 -mt-16 rounded-full blur-3xl group-hover:bg-yellow-500/10 transition-colors"></div>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition-transform">
@@ -416,7 +416,7 @@ export default function UserProfile() {
             </div>
 
             <div className="space-y-8">
-              <div className="bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative group overflow-hidden">
+              <div className="scroll-animate scroll-fade-right bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative group overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 -mr-16 -mt-16 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-colors"></div>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition-transform">
@@ -458,7 +458,7 @@ export default function UserProfile() {
             
             {/* My Orders Section */}
             <div className="md:col-span-2 mt-4">
-              <div className="bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+              <div className="scroll-animate bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-32 h-32 bg-yellow-500/5 -ml-16 -mt-16 rounded-full blur-3xl"></div>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20">

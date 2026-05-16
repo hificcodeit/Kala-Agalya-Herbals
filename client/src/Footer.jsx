@@ -147,7 +147,7 @@ export default function Footer() {
 
       {/* Floating WhatsApp Button */}
       <a
-        href="https://wa.me/917338758727?text=Hi%20Ponni%20Bakyasri,%20I%20would%20like%20to%20connect%20with%20you."
+        href="https://wa.me/917338758727?text=Hi%20Kala%20Agalya%20Herbals,%20I%20would%20like%20to%20connect%20with%20you."
         target="_blank"
         rel="noreferrer"
         className="fixed bottom-8 right-8 z-50 group"

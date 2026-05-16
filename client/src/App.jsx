@@ -29,6 +29,7 @@ import RefundPolicy from "./RefundPolicy";
 import ShippingPolicy from "./ShippingPolicy";
 import TermsOfService from "./TermsOfService";
 import { HelmetProvider } from "react-helmet-async";
+import useScrollAnimation from "./useScrollAnimation";
 
 
 function Layout() {
@@ -36,6 +37,9 @@ function Layout() {
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAuthenticated = !!localStorage.getItem("userToken");
   const isAuthRoute = ["/login", "/register", "/forgot-password"].includes(location.pathname) || location.pathname.startsWith("/reset-password") || (location.pathname === "/" && !isAuthenticated);
+
+  // Global scroll animations
+  useScrollAnimation();
 
   return (
     <>

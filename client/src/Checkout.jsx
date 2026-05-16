@@ -9,8 +9,8 @@ export default function Checkout() {
   const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
   const [form, setForm] = useState({
-    name: "",
-    email: "",
+    name: localStorage.getItem("userName") || "",
+    email: localStorage.getItem("userEmail") || "",
     phone: "",
     address: "",
     city: "",
@@ -112,8 +112,8 @@ export default function Checkout() {
                       type="email"
                       name="email"
                       value={form.email}
-                      onChange={handleChange}
-                      className="w-full bg-[#0d0b03] border border-yellow-500/10 text-white p-4 rounded-xl focus:outline-none focus:ring-1 focus:ring-yellow-500/50 focus:border-yellow-500 transition-all placeholder:text-gray-700"
+                      readOnly
+                      className="w-full bg-[#0d0b03] border border-yellow-500/10 text-white/60 p-4 rounded-xl focus:outline-none transition-all placeholder:text-gray-700 cursor-not-allowed"
                       placeholder="Enter email address"
                     />
                   </div>

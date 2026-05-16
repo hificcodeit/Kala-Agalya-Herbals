@@ -1,4 +1,5 @@
-require("dotenv").config({ override: true });
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env"), override: true });
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
@@ -30,7 +31,6 @@ app.use("/api/admin/orders", require("./routes/adminOrderRoutes"));
 app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 
-const path = require("path");
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

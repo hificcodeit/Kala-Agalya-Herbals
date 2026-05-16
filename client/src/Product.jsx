@@ -228,7 +228,7 @@ export default function Product() {
       {/* Products Section */}
       <section className="max-w-7xl mx-auto px-4 py-16 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+          <h2 className="scroll-animate text-3xl sm:text-5xl font-bold text-white mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
             Choose Your Naturopathy Hair Growth Bottle
           </h2>
           <p className="text-lg text-gray-400">
@@ -241,7 +241,7 @@ export default function Product() {
           {products.map((product) => (
             <div 
               key={product.id}
-              className="group relative bg-[#15120a]/80 backdrop-blur-md rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.6)] hover:shadow-[0_0_40px_rgba(234,179,8,0.2)] transition-all duration-300 transform hover:-translate-y-2 overflow-hidden border border-yellow-500/10 hover:border-yellow-500/40"
+              className={`scroll-animate scroll-delay-${(products.indexOf(product) % 3) + 1} group relative bg-[#15120a]/80 backdrop-blur-md rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.6)] hover:shadow-[0_0_40px_rgba(234,179,8,0.2)] transition-all duration-300 transform hover:-translate-y-2 overflow-hidden border border-yellow-500/10 hover:border-yellow-500/40`}
             >
               {/* Savings Badge */}
               {product.savings && (
@@ -341,7 +341,7 @@ export default function Product() {
         {/* Features Section */}
         <section className="mt-24 p-12 bg-[#15120a]/50 backdrop-blur-md rounded-3xl border border-yellow-500/10 relative overflow-hidden">
            <div className="absolute inset-0 bg-yellow-500/5 mix-blend-overlay"></div>
-          <h3 className="text-3xl font-bold text-center mb-12 text-white relative z-10">Why Choose Kala Agalya Herbals?</h3>
+          <h3 className="scroll-animate text-3xl font-bold text-center mb-12 text-white relative z-10">Why Choose Kala Agalya Herbals?</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
             <article className="text-center group">
               <div className="text-5xl mb-4 transform group-hover:scale-110 transition-transform duration-300">🌿</div>
@@ -368,7 +368,7 @@ export default function Product() {
 
         {/* Reviews Section */}
         <div className="mt-24 pb-20">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white text-center mb-12 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">Customer Ratings & Reviews</h2>
+          <h2 className="scroll-animate text-3xl sm:text-4xl font-bold text-white text-center mb-12 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">Customer Ratings & Reviews</h2>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             {/* Rating Summary */}
