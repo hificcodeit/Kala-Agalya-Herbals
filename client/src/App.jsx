@@ -30,6 +30,7 @@ import RefundPolicy from "./RefundPolicy";
 import ShippingPolicy from "./ShippingPolicy";
 import TermsOfService from "./TermsOfService";
 import { HelmetProvider } from "react-helmet-async";
+import { ReactLenis } from "@studio-freight/react-lenis";
 import useScrollAnimation from "./useScrollAnimation";
 
 
@@ -125,11 +126,13 @@ function Layout() {
 export default function App() {
   return (
     <HelmetProvider>
-      <ToastProvider>
-        <Router>
-          <Layout />
-        </Router>
-      </ToastProvider>
+      <ReactLenis root options={{ lerp: 0.05, duration: 1.5, smoothTouch: true }}>
+        <ToastProvider>
+          <Router>
+            <Layout />
+          </Router>
+        </ToastProvider>
+      </ReactLenis>
     </HelmetProvider>
   );
 }
