@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -15,7 +16,7 @@ export default function AdminOrderDetail() {
   const fetchOrder = useCallback(async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`https://kala-agalya-herbals-production.up.railway.app/api/admin/orders/${id}`, {
+      const response = await fetch(`${API_URL}/admin/orders/${id}`, {
         headers: {
           "Authorization": `Bearer ${token}`
         },
@@ -47,7 +48,7 @@ export default function AdminOrderDetail() {
     setUpdating(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`https://kala-agalya-herbals-production.up.railway.app/api/admin/orders/${id}/status`, {
+      const response = await fetch(`${API_URL}/admin/orders/${id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

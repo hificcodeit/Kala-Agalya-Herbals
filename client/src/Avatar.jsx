@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import React from 'react';
 
 /**
@@ -41,7 +42,7 @@ const Avatar = ({ src, name, size = "md", className = "" }) => {
 
   // Convert relative paths (uploads) to full URLs, keep Google or data URLs as is
   const cleanSrc = (src && typeof src === 'string' && src.trim() !== '' && !src.includes('undefined')) ? src : null;
-  const fullSrc = cleanSrc && (cleanSrc.startsWith('http') || cleanSrc.startsWith('data:image') ? cleanSrc : `https://kala-agalya-herbals-production.up.railway.app${cleanSrc}`);
+  const fullSrc = cleanSrc && (cleanSrc.startsWith('http') || cleanSrc.startsWith('data:image') ? cleanSrc : `${BASE_URL.replace(/\/api$/, "")}${cleanSrc}`);
 
   return (
     <div className={`relative rounded-full overflow-hidden flex items-center justify-center border border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.1)] group transition-all duration-300 hover:border-yellow-500/50 ${sizeClasses[size] || size} ${className}`}>

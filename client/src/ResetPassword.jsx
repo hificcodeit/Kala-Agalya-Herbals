@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -55,7 +56,7 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch(`https://kala-agalya-herbals-production.up.railway.app/api/users/resetpassword/${token}`, {
+      const response = await fetch(`${API_URL}/users/resetpassword/${token}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),

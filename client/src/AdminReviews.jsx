@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -12,7 +13,7 @@ export default function AdminReviews() {
   const fetchReviews = useCallback(async () => {
     const token = localStorage.getItem("adminToken");
     try {
-      const response = await fetch("https://kala-agalya-herbals-production.up.railway.app/api/reviews", {
+      const response = await fetch(`${API_URL}/reviews`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -43,7 +44,7 @@ export default function AdminReviews() {
 
     const token = localStorage.getItem("adminToken");
     try {
-      const response = await fetch(`https://kala-agalya-herbals-production.up.railway.app/api/reviews/${id}`, {
+      const response = await fetch(`${API_URL}/reviews/${id}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -136,7 +137,7 @@ export default function AdminReviews() {
                   {review.image && (
                     <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl border border-yellow-500/10 overflow-hidden bg-black shadow-2xl flex-shrink-0 group/img cursor-zoom-in">
                       <img
-                        src={`https://kala-agalya-herbals-production.up.railway.app${review.image}`}
+                        src={`${BASE_URL.replace(/\/api$/, "")}${review.image}`}
                         alt="Review Attachment"
                         className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-700"
                       />

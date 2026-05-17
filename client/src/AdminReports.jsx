@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -37,7 +38,7 @@ export default function AdminReports() {
     try {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(
-        `https://kala-agalya-herbals-production.up.railway.app/api/admin/orders/reports/data?startDate=${startDate}&endDate=${endDate}`,
+        `${API_URL}/admin/orders/reports/data?startDate=${startDate}&endDate=${endDate}`,
         {
           headers: {
             "Authorization": `Bearer ${token}`
