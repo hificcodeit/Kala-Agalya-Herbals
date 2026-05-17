@@ -291,6 +291,62 @@ export default function AdminReports() {
             </div>
           </div>
 
+          {/* Total Product Sales Detail */}
+          <div className="bg-[#111a11] border border-yellow-500/10 rounded-2xl shadow-lg p-6 sm:p-8 mb-8 overflow-hidden">
+            <h2 className="text-xl font-bold text-white tracking-wide mb-6 flex items-center gap-3">
+              <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Total Product Sales Detail
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-black/40 border-b border-yellow-900/30">
+                  <tr>
+                    <th className="px-6 py-4 text-[10px] font-bold text-yellow-500/70 uppercase tracking-widest whitespace-nowrap">Product Name</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-yellow-500/70 uppercase tracking-widest whitespace-nowrap">Size</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-yellow-500/70 uppercase tracking-widest whitespace-nowrap text-center">Units Sold</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-yellow-500/70 uppercase tracking-widest whitespace-nowrap text-right">Total Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-yellow-900/10">
+                  {report.bestSelling && report.bestSelling.length > 0 ? (
+                    report.bestSelling.map((product, index) => {
+                      const nameParts = product.name.split(" - ");
+                      const productName = nameParts[0] || product.name;
+                      const bottleSize = nameParts[1] || "-";
+                      
+                      return (
+                        <tr key={index} className="hover:bg-yellow-500/[0.02] transition-colors group">
+                          <td className="px-6 py-4 text-sm font-bold text-white group-hover:text-yellow-400 transition-colors uppercase whitespace-nowrap">
+                            {productName}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-yellow-500/80 font-bold whitespace-nowrap">
+                            {bottleSize}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="bg-[#0d0b03] border border-yellow-900/30 rounded-lg px-4 py-1.5 text-yellow-400 font-mono text-sm font-bold inline-block min-w-[60px]">
+                              {product.quantity}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="text-emerald-400 font-mono font-bold text-sm bg-emerald-900/10 border border-emerald-900/30 rounded-lg px-4 py-1.5 inline-block min-w-[100px] text-right">
+                              ₹{product.revenue.toFixed(0)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-8 text-center text-gray-500 text-sm italic">
+                        No product sales data available for this period.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Export Button */}
           <div className="bg-[#111a11] border border-yellow-500/10 rounded-2xl shadow-lg p-6 sm:p-8 mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
