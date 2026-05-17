@@ -25,7 +25,7 @@ export default function AdminProducts() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const response = await fetch("https://kala-agalya-herbals.onrender.com/api/products");
+      const response = await fetch("https://kala-agalya-herbals-production.up.railway.app/api/products");
       const data = await response.json();
       if (data.success) {
         setProducts(data.products);
@@ -56,7 +56,7 @@ export default function AdminProducts() {
     submitData.append("description", formData.description);
     submitData.append("sizes", JSON.stringify(formData.sizes));
     submitData.append("isActive", formData.isActive);
-    
+
     if (formData.images && formData.images.length > 0) {
       formData.images.forEach(file => {
         submitData.append("images", file);
@@ -65,13 +65,13 @@ export default function AdminProducts() {
 
     try {
       const url = editingProduct
-        ? `https://kala-agalya-herbals.onrender.com/api/products/${editingProduct._id}`
-        : "https://kala-agalya-herbals.onrender.com/api/products";
+        ? `https://kala-agalya-herbals-production.up.railway.app/api/products/${editingProduct._id}`
+        : "https://kala-agalya-herbals-production.up.railway.app/api/products";
 
       const response = await fetch(url, {
         method: editingProduct ? "PUT" : "POST",
         headers: {
-          "Authorization": `Bearer ${token}` 
+          "Authorization": `Bearer ${token}`
         },
         body: submitData,
       });
@@ -96,10 +96,10 @@ export default function AdminProducts() {
 
     const token = localStorage.getItem("adminToken");
     try {
-      const response = await fetch(`https://kala-agalya-herbals.onrender.com/api/products/${id}`, {
+      const response = await fetch(`https://kala-agalya-herbals-production.up.railway.app/api/products/${id}`, {
         method: "DELETE",
-        headers: { 
-          "Authorization": `Bearer ${token}` 
+        headers: {
+          "Authorization": `Bearer ${token}`
         },
       });
 
@@ -200,10 +200,10 @@ export default function AdminProducts() {
             <div className="h-56 bg-gradient-to-br from-green-900/40 to-[#0a0f0a] flex items-center justify-center relative overflow-hidden">
               <div className="absolute inset-0 bg-black/20 z-10 transition-opacity group-hover:opacity-0"></div>
               {product.images && product.images.length > 0 ? (
-                <img 
-                  src={product.images[0].startsWith("http") || product.images[0].startsWith("data:image") ? product.images[0] : `https://kala-agalya-herbals.onrender.com${product.images[0]}`} 
-                  alt={product.name} 
-                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" 
+                <img
+                  src={product.images[0].startsWith("http") || product.images[0].startsWith("data:image") ? product.images[0] : `https://kala-agalya-herbals-production.up.railway.app${product.images[0]}`}
+                  alt={product.name}
+                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
                 />
               ) : (
                 <svg className="w-20 h-20 text-green-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,19 +211,18 @@ export default function AdminProducts() {
                 </svg>
               )}
               <div className="absolute top-4 right-4 z-20">
-                    <span
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold shadow-lg ${
-                        product.isActive ? "bg-yellow-500 text-black" : "bg-red-500 text-white"
-                      }`}
-                    >
-                      {product.isActive ? "ACTIVE" : "INACTIVE"}
-                    </span>
+                <span
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold shadow-lg ${product.isActive ? "bg-yellow-500 text-black" : "bg-red-500 text-white"
+                    }`}
+                >
+                  {product.isActive ? "ACTIVE" : "INACTIVE"}
+                </span>
               </div>
             </div>
             <div className="p-6 relative">
               <h3 className="text-xl font-bold text-white mb-2 group-hover:text-yellow-400 transition-colors">{product.name}</h3>
               <p className="text-sm text-gray-400 mb-6 line-clamp-2 h-10">{product.description}</p>
-              
+
               <div className="space-y-3 mb-6 bg-black/20 p-4 rounded-xl border border-white/5">
                 {product.sizes.map((sizeInfo, idx) => (
                   <div key={idx} className="flex justify-between items-center text-sm">
@@ -231,7 +230,7 @@ export default function AdminProducts() {
                     <div className="flex gap-4 items-center">
                       <span className="text-yellow-400 font-bold font-mono">₹{sizeInfo.price}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${sizeInfo.stock < 10 ? 'bg-red-900/50 text-red-400' : 'bg-yellow-900/20 text-yellow-500'}`}>
-                         {sizeInfo.stock} left
+                        {sizeInfo.stock} left
                       </span>
                     </div>
                   </div>
@@ -260,17 +259,17 @@ export default function AdminProducts() {
       {products.length === 0 && (
         <div className="text-center py-20 bg-[#111a11] rounded-3xl border border-dashed border-yellow-500/20">
           <div className="w-16 h-16 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-               <svg className="w-8 h-8 text-yellow-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+            <svg className="w-8 h-8 text-yellow-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
           </div>
           <p className="text-gray-400 mb-4">No products found in inventory.</p>
           <button
-             onClick={() => {
-                 resetForm();
-                 setShowModal(true);
-             }}
-             className="text-yellow-400 font-bold hover:underline"
+            onClick={() => {
+              resetForm();
+              setShowModal(true);
+            }}
+            className="text-yellow-400 font-bold hover:underline"
           >
-             Add your first product
+            Add your first product
           </button>
         </div>
       )}
@@ -331,9 +330,9 @@ export default function AdminProducts() {
                     onChange={(e) => {
                       const files = Array.from(e.target.files);
                       if (files.length > 0) {
-                        setFormData({ 
-                          ...formData, 
-                          images: [...formData.images, ...files].slice(0, 5), 
+                        setFormData({
+                          ...formData,
+                          images: [...formData.images, ...files].slice(0, 5),
                           imageUrls: [...formData.imageUrls, ...files.map(f => URL.createObjectURL(f))].slice(0, 5)
                         });
                       }
@@ -344,24 +343,24 @@ export default function AdminProducts() {
                     <div className="flex flex-wrap gap-3">
                       {formData.imageUrls.map((url, idx) => (
                         <div key={idx} className="relative w-20 h-20 rounded-xl border border-yellow-500/20 overflow-hidden bg-black flex-shrink-0 group">
-                          <img 
-                            src={url.startsWith("blob") || url.startsWith("http") || url.startsWith("data:image") ? url : `https://kala-agalya-herbals.onrender.com${url}`} 
-                            alt={`Preview ${idx}`} 
-                            className="w-full h-full object-cover" 
+                          <img
+                            src={url.startsWith("blob") || url.startsWith("http") || url.startsWith("data:image") ? url : `https://kala-agalya-herbals-production.up.railway.app${url}`}
+                            alt={`Preview ${idx}`}
+                            className="w-full h-full object-cover"
                           />
                           <div className="absolute top-0 left-0 right-0 bg-yellow-500 text-black text-[8px] font-black text-center py-0.5 uppercase">
-                             IMG {idx + 1}
+                            IMG {idx + 1}
                           </div>
-                          <button 
+                          <button
                             type="button"
                             onClick={() => {
-                               const newUrls = formData.imageUrls.filter((_, i) => i !== idx);
-                               const newImages = formData.images.filter((_, i) => i !== idx);
-                               setFormData({...formData, imageUrls: newUrls, images: newImages});
+                              const newUrls = formData.imageUrls.filter((_, i) => i !== idx);
+                              const newImages = formData.images.filter((_, i) => i !== idx);
+                              setFormData({ ...formData, imageUrls: newUrls, images: newImages });
                             }}
                             className="absolute inset-0 bg-red-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
                           >
-                             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         </div>
                       ))}
@@ -372,20 +371,20 @@ export default function AdminProducts() {
 
               <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                 <div className="flex justify-between items-center mb-4">
-                   <label className="block text-[10px] font-bold text-yellow-500 uppercase tracking-widest">Pricing & Inventory</label>
-                   <button 
-                     type="button" 
-                     onClick={addSize}
-                     className="text-[9px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 px-2 py-1 rounded hover:bg-yellow-500 hover:text-black transition-all font-bold uppercase"
-                   >
-                     + Add Size
-                   </button>
+                  <label className="block text-[10px] font-bold text-yellow-500 uppercase tracking-widest">Pricing & Inventory</label>
+                  <button
+                    type="button"
+                    onClick={addSize}
+                    className="text-[9px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 px-2 py-1 rounded hover:bg-yellow-500 hover:text-black transition-all font-bold uppercase"
+                  >
+                    + Add Size
+                  </button>
                 </div>
                 <div className="space-y-4">
                   {formData.sizes.map((sizeInfo, index) => (
                     <div key={index} className="space-y-4 p-4 bg-black/40 border border-yellow-900/20 rounded-xl relative group/size">
                       {formData.sizes.length > 1 && (
-                        <button 
+                        <button
                           type="button"
                           onClick={() => removeSize(index)}
                           className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-lg z-10"
@@ -393,49 +392,49 @@ export default function AdminProducts() {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       )}
-                      
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[9px] text-gray-500 uppercase font-black">Size (e.g. 100ml)</label>
-                            <input
-                              type="text"
-                              value={sizeInfo.size}
-                              onChange={(e) => updateSize(index, "size", e.target.value)}
-                              className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
-                              required
-                            />
+                          <label className="text-[9px] text-gray-500 uppercase font-black">Size (e.g. 100ml)</label>
+                          <input
+                            type="text"
+                            value={sizeInfo.size}
+                            onChange={(e) => updateSize(index, "size", e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
+                            required
+                          />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] text-gray-500 uppercase font-black">Price (₹)</label>
-                            <input
-                              type="number"
-                              value={sizeInfo.price}
-                              onChange={(e) => updateSize(index, "price", e.target.value)}
-                              className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
-                              required
-                            />
+                          <label className="text-[9px] text-gray-500 uppercase font-black">Price (₹)</label>
+                          <input
+                            type="number"
+                            value={sizeInfo.price}
+                            onChange={(e) => updateSize(index, "price", e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
+                            required
+                          />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[9px] text-yellow-600/80 uppercase font-black">Offer Price (Optional)</label>
-                            <input
-                              type="number"
-                              value={sizeInfo.offerPrice || ""}
-                              onChange={(e) => updateSize(index, "offerPrice", e.target.value)}
-                              className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
-                            />
+                          <label className="text-[9px] text-yellow-600/80 uppercase font-black">Offer Price (Optional)</label>
+                          <input
+                            type="number"
+                            value={sizeInfo.offerPrice || ""}
+                            onChange={(e) => updateSize(index, "offerPrice", e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
+                          />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] text-gray-500 uppercase font-black">Stock</label>
-                            <input
-                              type="number"
-                              value={sizeInfo.stock}
-                              onChange={(e) => updateSize(index, "stock", e.target.value)}
-                              className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
-                              required
-                            />
+                          <label className="text-[9px] text-gray-500 uppercase font-black">Stock</label>
+                          <input
+                            type="number"
+                            value={sizeInfo.stock}
+                            onChange={(e) => updateSize(index, "stock", e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
+                            required
+                          />
                         </div>
                       </div>
                     </div>
