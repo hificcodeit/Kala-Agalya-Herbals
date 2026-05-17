@@ -18,7 +18,8 @@ exports.addReview = async (req, res) => {
     let image = "";
 
     if (req.file) {
-      image = `/uploads/reviews/${req.file.filename}`;
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      image = `data:${req.file.mimetype};base64,${b64}`;
     }
 
     const review = new Review({

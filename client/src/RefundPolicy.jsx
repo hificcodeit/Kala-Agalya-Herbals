@@ -110,7 +110,7 @@ export default function RefundPolicy() {
                 <div className="relative flex flex-col md:flex-row items-start md:items-center animate-[fadeIn_0.5s_ease-out] animation-delay-400">
                     <div className="flex-1 md:text-right md:pr-12 order-2 md:order-1 pl-16 md:pl-0">
                         <h3 className="text-xl font-bold text-yellow-400 mb-2">Step 3: Approval & Refund</h3>
-                        <p className="text-gray-400">We verify & process refund in 5-10 days.</p>
+                        <p className="text-gray-400"> We have a 3 day return policy , Once approved the refund will be issued within 7 business days .</p>
                     </div>
                     <div className="absolute left-0 md:left-1/2 md:-translate-x-1/2 w-14 h-14 bg-[#1c1b1b] border-2 border-yellow-500 rounded-full flex items-center justify-center z-10 text-xl font-bold text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)] order-1">3</div>
                      <div className="flex-1 md:pl-12 order-3 hidden md:block"></div>

@@ -32,7 +32,10 @@ exports.createProduct = async (req, res) => {
     let images = [];
 
     if (req.files && req.files.length > 0) {
-      images = req.files.map(file => `/uploads/products/${file.filename}`);
+      images = req.files.map(file => {
+        const b64 = Buffer.from(file.buffer).toString("base64");
+        return `data:${file.mimetype};base64,${b64}`;
+      });
     }
 
     // Sizes might come as a JSON string from FormData
@@ -78,7 +81,10 @@ exports.updateProduct = async (req, res) => {
     const updateData = { name, description, category, isActive: isActive === "true" || isActive === true, updatedAt: Date.now() };
 
     if (req.files && req.files.length > 0) {
-      updateData.images = req.files.map(file => `/uploads/products/${file.filename}`);
+      updateData.images = req.files.map(file => {
+        const b64 = Buffer.from(file.buffer).toString("base64");
+        return `data:${file.mimetype};base64,${b64}`;
+      });
     }
 
     if (sizesStr) {

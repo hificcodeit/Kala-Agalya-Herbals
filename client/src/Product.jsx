@@ -22,8 +22,9 @@ export default function Product() {
     // 1st image -> 100ml, 2nd -> 200ml, 3rd -> 500ml
     const img = images[sizeIdx] || images[0]; 
     if (img.startsWith("http")) return img;
+    if (img.startsWith("data:image")) return img;
     if (img.startsWith("/images/")) return img;
-    return `${BASE_URL}${img}`;
+    return `${BASE_URL.replace(/\/api$/, "")}${img.startsWith("/") ? img : `/${img}`}`;
   };
 
   const products = dbProducts.filter(p => p.isActive).flatMap(prod => 
@@ -157,7 +158,7 @@ export default function Product() {
     "@type": "Product",
     "name": "Kala Agalya Herbals Herbal Organic Hair Oil",
     "image": "https://kalaagalyaherbals.com/images/bottle-200.png",
-    "description": "Authentic Ayurvedic Herbal Hair Oil with 18+ rare herbs. No chemicals, pure organic care.",
+    "description": "Authentic Naturopathy Herbal Hair Oil with 18+ rare herbs. No chemicals, pure organic care.",
     "brand": {
       "@type": "Brand",
       "name": "Kala Agalya Herbals"
@@ -178,9 +179,9 @@ export default function Product() {
   return (
     <div className="min-h-screen bg-[#0a0802] relative overflow-hidden text-gray-200">
       <Helmet>
-        <title>Shop Kala Agalya Ayurvedic Hair Oil | Natural Growth & Hair Fall Care</title>
-        <meta name="description" content="Choose your perfect size of Kala Agalya Herbals organic hair oil. 100ml, 200ml, and 500ml bottles available. Infused with 18+ Ayurvedic herbs for hair growth." />
-        <meta name="keywords" content="buy herbal hair oil, natural hair growth oil, ayurvedic hair treatment, organic hair oil price, Kala Agalya Herbals shop" />
+        <title>Shop Kala Agalya Naturopathy Hair Oil | Natural Growth & Hair Fall Care</title>
+        <meta name="description" content="Choose your perfect size of Kala Agalya Herbals organic hair oil. 100ml, 200ml, and 500ml bottles available. Infused with 18+ Naturopathy herbs for hair growth." />
+        <meta name="keywords" content="buy herbal hair oil, natural hair growth oil, Naturopathy hair treatment, organic hair oil price, Kala Agalya Herbals shop" />
         <link rel="canonical" href="https://kalaagalyaherbals.com/product" />
         <script type="application/ld+json">
           {JSON.stringify(productSchema)}
@@ -203,7 +204,7 @@ export default function Product() {
             <div className="flex flex-col items-center gap-4 mb-6">
                <img src="/images/icons/logo.png" alt="Kala Agalya Herbals Logo" className="h-20 w-auto drop-shadow-[0_0_20px_rgba(234,179,8,0.5)] mb-2" />
                <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-200 to-yellow-400 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">
-                 Kala Agalya Herbals <br/> Ayurvedic Herbal Hair Oil
+                 Kala Agalya Herbals <br/> Naturopathy Herbal Hair Oil
                </h1>
             </div>
             <p className="text-xl sm:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto font-light">
@@ -227,8 +228,8 @@ export default function Product() {
       {/* Products Section */}
       <section className="max-w-7xl mx-auto px-4 py-16 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-            Choose Your Ayurvedic Hair Growth Bottle
+          <h2 className="scroll-animate text-3xl sm:text-5xl font-bold text-white mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+            Choose Your Naturopathy Hair Growth Bottle
           </h2>
           <p className="text-lg text-gray-400">
             Select the bottle size that suits your herbal hair care needs
@@ -240,7 +241,7 @@ export default function Product() {
           {products.map((product) => (
             <div 
               key={product.id}
-              className="group relative bg-[#15120a]/80 backdrop-blur-md rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.6)] hover:shadow-[0_0_40px_rgba(234,179,8,0.2)] transition-all duration-300 transform hover:-translate-y-2 overflow-hidden border border-yellow-500/10 hover:border-yellow-500/40"
+              className={`scroll-animate scroll-delay-${(products.indexOf(product) % 3) + 1} group relative bg-[#15120a]/80 backdrop-blur-md rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.6)] hover:shadow-[0_0_40px_rgba(234,179,8,0.2)] transition-all duration-300 transform hover:-translate-y-2 overflow-hidden border border-yellow-500/10 hover:border-yellow-500/40`}
             >
               {/* Savings Badge */}
               {product.savings && (
@@ -340,7 +341,7 @@ export default function Product() {
         {/* Features Section */}
         <section className="mt-24 p-12 bg-[#15120a]/50 backdrop-blur-md rounded-3xl border border-yellow-500/10 relative overflow-hidden">
            <div className="absolute inset-0 bg-yellow-500/5 mix-blend-overlay"></div>
-          <h3 className="text-3xl font-bold text-center mb-12 text-white relative z-10">Why Choose Kala Agalya Herbals?</h3>
+          <h3 className="scroll-animate text-3xl font-bold text-center mb-12 text-white relative z-10">Why Choose Kala Agalya Herbals?</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
             <article className="text-center group">
               <div className="text-5xl mb-4 transform group-hover:scale-110 transition-transform duration-300">🌿</div>
@@ -367,7 +368,7 @@ export default function Product() {
 
         {/* Reviews Section */}
         <div className="mt-24 pb-20">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white text-center mb-12 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">Customer Ratings & Reviews</h2>
+          <h2 className="scroll-animate text-3xl sm:text-4xl font-bold text-white text-center mb-12 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">Customer Ratings & Reviews</h2>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             {/* Rating Summary */}
@@ -485,7 +486,7 @@ export default function Product() {
                       {review.image && (
                         <div className="mt-4">
                           <img 
-                            src={`${BASE_URL}${review.image}`} 
+                            src={review.image.startsWith("data:image") ? review.image : `${BASE_URL.replace(/\/api$/, "")}${review.image.startsWith("/") ? review.image : `/${review.image}`}`} 
                             alt={`Customer review photo for Kala Agalya Herbal Hair Oil by ${review.name}`} 
                             className="w-32 h-32 object-cover rounded-xl border border-yellow-500/20"
                           />

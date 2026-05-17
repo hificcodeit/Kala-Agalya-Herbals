@@ -7,16 +7,16 @@ const heroSlides = [
     title: "Revitalize Your",
     highlight: "Natural Shine",
     subtitle: "Experience the ancient power of 18+ rare herbs blended in pure coconut oil.",
-    badge: "🌿 100% Ayurvedic & Organic",
-    image: "/images/home.png",
-    alt: "Ayurvedic herbal hair oil bottle showcase - Kala Agalya Herbals"
+    badge: "🌿 100% Naturopathy & Organic",
+    image: "/images/Home 1.png",
+    alt: "Naturopathy herbal hair oil bottle showcase - Kala Agalya Herbals"
   },
   {
     title: "Strengthen Your",
     highlight: "Roots From Within",
     subtitle: "Clinically proven formula enriched with Amla and Hibiscus to stop hair fall.",
     badge: "💪 Zero Hair Fall Guarantee",
-    image: "/images/home1.png",
+    image: "/images/home 2.png",
     alt: "Natural hair growth treatment with 18 rare herbs"
   },
   {
@@ -24,8 +24,32 @@ const heroSlides = [
     highlight: "In Every Drop",
     subtitle: "Free from parabens, sulfates, and mineral oils. Just pure nature.",
     badge: "✨ Premium Quality Promise",
-    image: "/images/home2.png",
+    image: "/images/Home 3.png",
     alt: "Organic hair oil chemical-free formula"
+  },
+  {
+    title: "Nourish Your",
+    highlight: "Scalp Deeply",
+    subtitle: "Soothe your scalp and eliminate dandruff with the cooling essence of Vetiver and Neem.",
+    badge: "🌱 Soothing Scalp Care",
+    image: "/images/Home 4.png",
+    alt: "Deep nourishment and scalp care"
+  },
+  {
+    title: "Restore Your",
+    highlight: "Natural Volume",
+    subtitle: "Stimulate new hair follicles with the richness of Fenugreek and Black Cumin.",
+    badge: "🌟 Volume Booster",
+    image: "/images/Home 5.png",
+    alt: "Hair volume and density restoration"
+  },
+  {
+    title: "Embrace The",
+    highlight: "Ayurvedic Secret",
+    subtitle: "A time-tested blend crafted to lock in moisture and protect from daily damage.",
+    badge: "🛡️ Complete Protection",
+    image: "/images/Home 6.png",
+    alt: "Ayurvedic hair protection and moisture"
   }
 ];
 
@@ -69,7 +93,7 @@ export default function Landing() {
     "name": "Kala Agalya Herbals",
     "url": "https://kalaagalyaherbals.com",
     "logo": "https://kalaagalyaherbals.com/images/icons/logo.png",
-    "description": "Premium Ayurvedic Herbal Hair Oil made with 18+ rare herbs for hair growth and hair fall control.",
+    "description": "Premium Naturopathy Herbal Hair Oil made with 18+ rare herbs for hair growth and hair fall control.",
     "contactPoint": {
       "@type": "ContactPoint",
       "telephone": "+91-7338758727",
@@ -80,9 +104,9 @@ export default function Landing() {
   return (
     <div className="overflow-x-hidden relative">
       <Helmet>
-        <title>Kala Agalya Herbals | Best Ayurvedic Herbal Hair Oil for Growth & Hair Fall</title>
-        <meta name="description" content="Experience the ancient power of 18+ rare herbs with Kala Agalya Herbals. Our 100% organic Ayurvedic hair oil strengthens roots, prevents hair fall, and promotes natural shine." />
-        <meta name="keywords" content="herbal hair oil, ayurvedic hair growth oil, natural hair care, stop hair fall, organic hair oil India, Kala Agalya Herbals" />
+        <title>Kala Agalya Herbals | Best Naturopathy Herbal Hair Oil for Growth & Hair Fall</title>
+        <meta name="description" content="Experience the ancient power of 18+ rare herbs with Kala Agalya Herbals. Our 100% organic Naturopathy hair oil strengthens roots, prevents hair fall, and promotes natural shine." />
+        <meta name="keywords" content="herbal hair oil, Naturopathy hair growth oil, natural hair care, stop hair fall, organic hair oil India, Kala Agalya Herbals" />
         <link rel="canonical" href="https://kalaagalyaherbals.com" />
         <script type="application/ld+json">
           {JSON.stringify(schemaData)}
@@ -197,7 +221,7 @@ export default function Landing() {
       </section>
 
       {/* Stats Section */}
-      <section className="bg-[#121005]/90 backdrop-blur-md py-10 relative -mt-10 mx-4 md:mx-auto max-w-6xl rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.6)] z-20 grid grid-cols-2 md:grid-cols-4 gap-8 text-center border border-yellow-500/30">
+      <section className="scroll-animate scroll-scale bg-[#121005]/90 backdrop-blur-md py-10 relative -mt-10 mx-4 md:mx-auto max-w-6xl rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.6)] z-20 grid grid-cols-2 md:grid-cols-4 gap-8 text-center border border-yellow-500/30">
         <div>
           <h3 className="text-4xl font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(234,179,8,0.6)]">100%</h3>
           <p className="text-amber-100/70 mt-1">Natural Ingredients</p>
@@ -221,7 +245,7 @@ export default function Landing() {
          <div className="absolute inset-0 bg-green-900/5 bg-[radial-gradient(circle_at_center,_transparent_0%,_#0a0f0a_100%)] pointer-events-none"></div>
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">Why Choose Kala Agalya Herbals Hair Oil?</h2>
+            <h2 className="scroll-animate text-3xl md:text-5xl font-bold text-white mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">Why Choose Kala Agalya Herbals Hair Oil?</h2>
             <p className="text-lg text-gray-400">
               We bring you the secrets of ancient Ayurveda, bottled with care and precision for the modern lifestyle.
             </p>
@@ -233,7 +257,7 @@ export default function Landing() {
               { title: "Traditional Recipe", desc: "Made using age-old methods to preserve herbal potency.", icon: "🏺" },
               { title: "Visible Results", desc: "Reduces hair fall and promotes growth in just 4 weeks.", icon: "✨" }
             ].map((item, i) => (
-              <article key={i} className="bg-[#15120a] p-8 rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_25px_rgba(234,179,8,0.2)] transition-all duration-300 transform hover:-translate-y-2 group border border-yellow-500/10 hover:border-yellow-500/50">
+              <article key={i} className={`scroll-animate scroll-delay-${i + 1} bg-[#15120a] p-8 rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_25px_rgba(234,179,8,0.2)] transition-all duration-300 transform hover:-translate-y-2 group border border-yellow-500/10 hover:border-yellow-500/50`}>
                 <div className="text-5xl mb-6 bg-yellow-900/20 w-20 h-20 flex items-center justify-center rounded-2xl group-hover:bg-yellow-500/20 transition-colors shadow-[inset_0_0_10px_rgba(234,179,8,0.1)]">
                   {item.icon}
                 </div>
@@ -248,15 +272,15 @@ export default function Landing() {
       {/* Ingredients Scroll */}
       <section id="ingredients" className="py-20 bg-transparent overflow-hidden relative">
         <div className="max-w-7xl mx-auto px-4 mb-12 relative z-10">
-          <h2 className="text-3xl font-bold text-white text-center drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">Powered by 18+ Rare Ayurvedic Herbs</h2>
-          <p className="text-center text-gray-400 mt-4 max-w-2xl mx-auto">
+          <h2 className="scroll-animate text-3xl font-bold text-white text-center drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">Powered by 18+ Rare Naturopathy Herbs</h2>
+          <p className="scroll-animate scroll-delay-1 text-center text-gray-400 mt-4 max-w-2xl mx-auto">
              Each bottle is infused with a potent blend of 18+ herbs, carefully selected for their unique hair-nourishing properties.
           </p>
         </div>
         
         <div className="flex justify-center gap-8 flex-wrap max-w-7xl mx-auto transition-all duration-500 ease-in-out relative z-10">
           {visibleIngredients.map((item, i) => (
-            <div key={i} className="group relative w-40 text-center cursor-pointer animate-[fadeIn_0.5s_ease-out]">
+            <div key={i} className={`scroll-animate scroll-delay-${(i % 6) + 1} group relative w-40 text-center cursor-pointer`}>
               <div className="w-28 h-28 mx-auto rounded-full overflow-hidden border-2 border-yellow-500/30 shadow-[0_0_15px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300 ring-4 ring-transparent group-hover:ring-yellow-400/50 group-hover:shadow-[0_0_20px_rgba(234,179,8,0.4)]">
                 <img src={item.img} alt={`Kala Agalya Herbal ingredient: ${item.name}`} className="w-full h-full object-cover filter brightness-90 group-hover:brightness-110 transition-all" />
               </div>
@@ -283,7 +307,7 @@ export default function Landing() {
       <section className="bg-[#0a0802] border-t border-yellow-900/50 text-white py-16 px-4 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-yellow-600/5 bg-[radial-gradient(circle_at_bottom,_transparent_0%,_#0a0802_70%)] pointer-events-none"></div>
         <div className="relative z-10">
-          <h2 className="text-3xl md:text-5xl font-bold mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]">Ready to Transform Your Hair Naturally?</h2>
+          <h2 className="scroll-animate text-3xl md:text-5xl font-bold mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]">Ready to Transform Your Hair Naturally?</h2>
           <p className="text-gray-400 mb-10 text-lg max-w-2xl mx-auto">
             Join thousands of satisfied customers who have switched to Kala Agalya Herbals Herbal Organic Hair Oil.
           </p>

@@ -58,6 +58,26 @@ export default function AdminOrders() {
     return order.orderStatus === filter;
   });
 
+  const handleFastUpdate = async (orderId, newStatus) => {
+    try {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch(`https://kala-agalya-herbals.onrender.com/api/admin/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ orderStatus: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOrders(orders.map(o => o._id === orderId ? { ...o, orderStatus: newStatus } : o));
+      }
+    } catch (err) {
+      console.error("Fast update failed", err);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="mb-10">
@@ -96,8 +116,8 @@ export default function AdminOrders() {
             <table className="w-full">
               <thead className="bg-[#0d0b03] border-b border-yellow-900/10">
                 <tr>
-                  {["Order ID", "Customer Name", "Contact", "Amount", "Payment", "Status", "Date", "Action"].map((head) => (
-                    <th key={head} className="px-6 py-4 text-left text-[10px] font-bold text-yellow-500/60 uppercase tracking-widest whitespace-nowrap">
+                  {["Order ID", "Customer Name", "Contact", "Amount", "Payment", "Status", "Fast Action", "Date", "Details"].map((head) => (
+                    <th key={head} className={`px-6 py-4 text-left text-[10px] font-bold text-yellow-500/60 uppercase tracking-widest whitespace-nowrap ${head === 'Fast Action' ? 'text-center' : ''}`}>
                       {head}
                     </th>
                   ))}
@@ -138,15 +158,41 @@ export default function AdminOrders() {
                           {order.orderStatus}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex flex-col items-center gap-2">
+                          <label className="relative inline-flex items-center cursor-pointer group">
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={order.orderStatus === "Shipped" || order.orderStatus === "Delivered"}
+                              onChange={(e) => handleFastUpdate(order._id, e.target.checked ? "Shipped" : "Pending")}
+                              disabled={order.orderStatus === "Delivered" || order.orderStatus === "Cancelled"}
+                            />
+                            <div className="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 peer-disabled:opacity-50"></div>
+                            <span className="ml-3 text-[9px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-white transition-colors w-16 text-center">
+                              Dispatched
+                            </span>
+                          </label>
+                          
+                          {(order.orderStatus === "Shipped") && (
+                            <button
+                               onClick={() => handleFastUpdate(order._id, "Delivered")}
+                               className="px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/30 rounded text-[9px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-all w-24 text-center mt-1"
+                            >
+                               Mark Delivered
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap border-l border-yellow-900/10">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
                         <Link
                           to={`/admin/orders/${order._id}`}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-900/20 text-yellow-500 border border-yellow-500/30 rounded-xl hover:bg-yellow-500 hover:text-black transition-all font-bold text-[10px] uppercase tracking-wider"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#0d0b03] text-gray-400 border border-yellow-900/30 rounded-lg hover:border-yellow-500/50 hover:text-yellow-400 transition-all font-bold text-[9px] uppercase tracking-wider"
                         >
-                          View Details
+                          View
                         </Link>
                       </td>
                     </tr>

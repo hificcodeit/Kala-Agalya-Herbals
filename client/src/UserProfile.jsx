@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "./Alert";
 import Avatar from "./Avatar";
+import { API_URL } from "./services/api";
 
 export default function UserProfile() {
   const [profile, setProfile] = useState(null);
@@ -10,6 +11,7 @@ export default function UserProfile() {
   const [updating, setUpdating] = useState(false);
   const [newProfilePic, setNewProfilePic] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+
   
   const [formData, setFormData] = useState({
     name: "",
@@ -71,6 +73,8 @@ export default function UserProfile() {
           navigate("/login");
         }
       }
+
+
     } catch (err) {
       addToast("Server error", "error");
     } finally {
@@ -130,7 +134,7 @@ export default function UserProfile() {
     localStorage.removeItem("userEmail");
     localStorage.removeItem("adminToken"); // Also clear admin token if exists
     localStorage.removeItem("userAvatar");
-    addToast("Logged out successfully", "info");
+    addToast("Logged out successfully", "success");
     document.dispatchEvent(new Event("profileUpdated"));
     navigate("/login");
   };
@@ -142,6 +146,8 @@ export default function UserProfile() {
       </div>
     );
   }
+
+
 
   return (
     <div className="min-h-screen bg-[#0d0b03] text-gray-200 font-sans selection:bg-yellow-500 selection:text-black">
@@ -348,7 +354,7 @@ export default function UserProfile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fadeIn">
             {/* Display Mode */}
             <div className="space-y-8">
-              <div className="bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative group overflow-hidden">
+              <div className="scroll-animate scroll-fade-left bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative group overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 -mr-16 -mt-16 rounded-full blur-3xl group-hover:bg-yellow-500/10 transition-colors"></div>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition-transform">
@@ -374,7 +380,7 @@ export default function UserProfile() {
             </div>
 
             <div className="space-y-8">
-              <div className="bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative group overflow-hidden">
+              <div className="scroll-animate scroll-fade-right bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative group overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 -mr-16 -mt-16 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-colors"></div>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition-transform">
@@ -412,6 +418,25 @@ export default function UserProfile() {
                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                  </button>
               </div>
+            </div>
+            
+            {/* My Orders Link */}
+            <div className="md:col-span-2 mt-4">
+              <Link to="/my-orders" className="block scroll-animate bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative overflow-hidden group hover:border-yellow-500/30 transition-all">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-yellow-500/5 -ml-16 -mt-16 rounded-full blur-3xl group-hover:bg-yellow-500/10 transition-colors"></div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition-transform">
+                      <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-yellow-500/80 uppercase tracking-[0.3em]">My Orders</h3>
+                      <p className="text-xs text-gray-500 mt-1">View order history, track deliveries & download invoices</p>
+                    </div>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-600 group-hover:text-yellow-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </div>
+              </Link>
             </div>
           </div>
         )}

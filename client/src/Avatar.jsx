@@ -39,9 +39,9 @@ const Avatar = ({ src, name, size = "md", className = "" }) => {
     "2xl": "w-40 h-40 text-5xl"
   };
 
-  // Convert relative paths (uploads) to full URLs, keep Google URLs as is
+  // Convert relative paths (uploads) to full URLs, keep Google or data URLs as is
   const cleanSrc = (src && typeof src === 'string' && src.trim() !== '' && !src.includes('undefined')) ? src : null;
-  const fullSrc = cleanSrc && (cleanSrc.startsWith('http') ? cleanSrc : `https://kala-agalya-herbals.onrender.com${cleanSrc}`);
+  const fullSrc = cleanSrc && (cleanSrc.startsWith('http') || cleanSrc.startsWith('data:image') ? cleanSrc : `https://kala-agalya-herbals.onrender.com${cleanSrc}`);
 
   return (
     <div className={`relative rounded-full overflow-hidden flex items-center justify-center border border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.1)] group transition-all duration-300 hover:border-yellow-500/50 ${sizeClasses[size] || size} ${className}`}>

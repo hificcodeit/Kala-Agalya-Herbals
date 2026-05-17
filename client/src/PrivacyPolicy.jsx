@@ -93,7 +93,7 @@ export default function PrivacyPolicy() {
                       <div className="mt-4 bg-green-900/10 p-6 rounded-2xl border border-yellow-500/20 flex flex-col md:flex-row gap-8 items-start md:items-center">
                           <div>
                               <p className="text-sm text-gray-400 uppercase tracking-widest mb-1">Email Us</p>
-                              <a href="mailto:client-email@example.com" className="text-lg text-white font-medium hover:text-yellow-400 transition-colors">client-email@example.com</a>
+                              <a href="mailto:client-email@example.com" className="text-lg text-white font-medium hover:text-yellow-400 transition-colors">kalaagalyaherbals@gmail.com</a>
                           </div>
                           <div className="hidden md:block w-px h-12 bg-yellow-500/20"></div>
                            <div>

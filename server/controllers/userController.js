@@ -8,7 +8,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Sign JWT token
 const signToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || "fallback_secret", {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "30d",
   });
 };
@@ -101,7 +101,11 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({ success: false, message: "User already exists" });
     }
 
-    const avatar = req.file ? `/uploads/users/${req.file.filename}` : undefined;
+    let avatar = undefined;
+    if (req.file) {
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      avatar = `data:${req.file.mimetype};base64,${b64}`;
+    }
 
     const user = await User.create({
       name,
@@ -216,8 +220,10 @@ exports.updateUserProfile = async (req, res) => {
       }
       
       if (req.file) {
-        console.log("Replacing avatar with:", req.file.filename);
-        user.avatar = `/uploads/users/${req.file.filename}`;
+        const b64 = Buffer.from(req.file.buffer).toString("base64");
+        const b64Avatar = `data:${req.file.mimetype};base64,${b64}`;
+        console.log("Replacing avatar with base64 string");
+        user.avatar = b64Avatar;
       } else {
         console.log("No file received in request");
       }
@@ -299,7 +305,7 @@ exports.forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // 4. Build the reset URL (raw token goes in the link, NOT the hashed one)
-    const clientBaseUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientBaseUrl = process.env.CLIENT_URL;
     const resetUrl = `${clientBaseUrl}/reset-password/${resetToken}`;
 
     // 5. Check if email is configured

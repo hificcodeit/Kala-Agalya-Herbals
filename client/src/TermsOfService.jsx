@@ -10,7 +10,7 @@ export default function TermsOfService() {
     <div className="bg-[#0d0b03] min-h-screen relative overflow-hidden text-gray-300">
       <Helmet>
         <title>Terms of Service | Kala Agalya Herbals</title>
-        <meta name="description" content="Read the terms and conditions for using Kala Agalya Herbals website and purchasing our Ayurvedic hair growth products." />
+        <meta name="description" content="Read the terms and conditions for using Kala Agalya Herbals website and purchasing our Naturopathy hair growth products." />
         <link rel="canonical" href="https://kalaagalyaherbals.com/terms-of-service" />
       </Helmet>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
@@ -26,7 +26,7 @@ export default function TermsOfService() {
         <div className="bg-[#1c1b1b]/40 backdrop-blur-md rounded-3xl border border-yellow-900/30 p-8 md:p-12 shadow-2xl space-y-12">
             
             <p className="text-lg leading-relaxed text-gray-300 border-b border-yellow-900/30 pb-8">
-              By accessing and using the website of <strong className="text-yellow-400">Kala Agalya Herbals Hair Oils</strong>, you agree to be bound by the following Terms and Conditions. Please read them carefully.
+              By accessing and using the website of <strong className="text-yellow-400">KALA AGALYA HERBALSKALAVATHI H</strong>, you agree to be bound by the following Terms and Conditions. Please read them carefully.
             </p>
 
             <div className="grid gap-10">

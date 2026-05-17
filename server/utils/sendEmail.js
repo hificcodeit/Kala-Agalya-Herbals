@@ -18,20 +18,20 @@ const sendEmail = async (options) => {
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
-    host: process.env.EMAIL_HOST || "smtp.gmail.com",
-    port: Number(process.env.EMAIL_PORT) || 587,
-    secure: false, // true for 465, false for other ports (STARTTLS)
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // STARTTLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
     tls: {
-      rejectUnauthorized: true, // Enforce valid TLS certificates in production
+      rejectUnauthorized: true,
     },
   });
 
   const mailOptions = {
-    from: `"Kala Agalya Herbals" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+    from: `"Kala Agalya Herbals" <${process.env.EMAIL_USER}>`,  // EMAIL_USER is the sender
     to: options.email,
     subject: options.subject,
     text: options.message,

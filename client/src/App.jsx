@@ -16,6 +16,7 @@ import UserLogin from "./UserLogin";
 import Register from "./Register";
 import ForgotPassword from "./ForgotPassword";
 import UserProfile from "./UserProfile";
+import MyOrders from "./MyOrders";
 import ResetPassword from "./ResetPassword";
 import AuthRoute from "./AuthRoute";
 import AdminReports from "./AdminReports";
@@ -29,12 +30,17 @@ import RefundPolicy from "./RefundPolicy";
 import ShippingPolicy from "./ShippingPolicy";
 import TermsOfService from "./TermsOfService";
 import { HelmetProvider } from "react-helmet-async";
+import useScrollAnimation from "./useScrollAnimation";
+
 
 function Layout() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAuthenticated = !!localStorage.getItem("userToken");
   const isAuthRoute = ["/login", "/register", "/forgot-password"].includes(location.pathname) || location.pathname.startsWith("/reset-password") || (location.pathname === "/" && !isAuthenticated);
+
+  // Global scroll animations
+  useScrollAnimation();
 
   return (
     <>
@@ -65,6 +71,14 @@ function Layout() {
             element={
               <AuthRoute>
                 <UserProfile />
+              </AuthRoute>
+            }
+          />
+          <Route
+            path="/my-orders"
+            element={
+              <AuthRoute>
+                <MyOrders />
               </AuthRoute>
             }
           />

@@ -223,29 +223,67 @@ export default function AdminReports() {
 
           {/* Best Selling Products */}
           <div className="bg-[#111a11] border border-yellow-500/10 rounded-2xl shadow-lg p-6 sm:p-8 mb-8">
-            <h2 className="text-xl font-bold text-white tracking-wide mb-6">Top Performing Products</h2>
+            <h2 className="text-xl font-bold text-white tracking-wide mb-6 flex items-center gap-3">
+              <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+              Top Performing Products
+            </h2>
             <div className="space-y-4">
               {report.bestSelling && report.bestSelling.length > 0 ? (
-                report.bestSelling.map((product, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-black/40 p-5 rounded-xl border border-yellow-900/20 hover:border-yellow-500/30 transition-all hover:bg-black/60 group gap-4"
-                  >
-                    <div className="flex items-center gap-6">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shadow-inner ${index === 0 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' : index === 1 ? 'bg-gray-400/20 text-gray-400 border border-gray-400/30' : index === 2 ? 'bg-orange-700/20 text-orange-600 border border-orange-700/30' : 'bg-green-900/20 text-yellow-500 border border-yellow-500/20'}`}>
-                        #{index + 1}
+                report.bestSelling.map((product, index) => {
+                  // Extract size from name like "HERBAL OIL - 100ML"
+                  const nameParts = product.name.split(" - ");
+                  const productName = nameParts[0] || product.name;
+                  const bottleSize = nameParts[1] || "";
+                  const maxQty = report.bestSelling[0]?.quantity || 1;
+                  const barWidth = Math.max((product.quantity / maxQty) * 100, 8);
+
+                  return (
+                    <div
+                      key={index}
+                      className="bg-black/40 rounded-xl border border-yellow-900/20 hover:border-yellow-500/30 transition-all hover:bg-black/60 group overflow-hidden"
+                    >
+                      <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        {/* Rank + Name */}
+                        <div className="flex items-center gap-5">
+                          <div className={`w-11 h-11 rounded-lg flex items-center justify-center font-black text-sm shadow-inner shrink-0 ${index === 0 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' : index === 1 ? 'bg-gray-400/20 text-gray-400 border border-gray-400/30' : index === 2 ? 'bg-orange-700/20 text-orange-600 border border-orange-700/30' : 'bg-green-900/20 text-yellow-500 border border-yellow-500/20'}`}>
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="font-bold text-white group-hover:text-yellow-400 transition-colors uppercase text-sm">{productName}</p>
+                            {bottleSize && (
+                              <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500/50"></span>
+                                Bottle Size: <span className="text-yellow-500/80 font-bold">{bottleSize}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Stats */}
+                        <div className="flex items-center gap-6 w-full sm:w-auto">
+                          {/* Pieces Sold */}
+                          <div className="bg-[#0d0b03] border border-yellow-900/30 rounded-xl px-5 py-3 text-center min-w-[100px]">
+                            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-1">Pieces Sold</p>
+                            <p className="text-2xl font-black text-yellow-400 font-mono leading-none">{product.quantity}</p>
+                          </div>
+                          {/* Revenue */}
+                          <div className="bg-[#0d0b03] border border-emerald-900/30 rounded-xl px-5 py-3 text-center min-w-[120px]">
+                            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-1">Revenue</p>
+                            <p className="text-2xl font-black text-emerald-400 font-mono leading-none">₹{product.revenue.toFixed(0)}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-white group-hover:text-yellow-400 transition-colors uppercase text-sm">{product.name}</p>
-                        <p className="text-xs text-gray-500 mt-1">Units Sold: <span className="text-gray-300 font-mono font-bold">{product.quantity}</span></p>
+
+                      {/* Progress bar */}
+                      <div className="h-1 bg-black/60">
+                        <div
+                          className={`h-full rounded-r-full transition-all duration-700 ${index === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' : index === 1 ? 'bg-gradient-to-r from-gray-600 to-gray-400' : 'bg-gradient-to-r from-yellow-900 to-yellow-600'}`}
+                          style={{ width: `${barWidth}%` }}
+                        ></div>
                       </div>
                     </div>
-                    <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-2 sm:pt-0">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Revenue</p>
-                      <p className="text-lg font-bold text-emerald-400 font-mono">₹{product.revenue.toFixed(0)}</p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="text-center text-gray-500 py-8 italic text-sm">No sales data available for this period.</p>
               )}
