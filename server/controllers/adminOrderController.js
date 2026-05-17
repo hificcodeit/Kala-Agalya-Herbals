@@ -1,4 +1,5 @@
 const Order = require("../models/Order");
+const Product = require("../models/Product");
 
 // Get all orders
 exports.getAllOrders = async (req, res) => {
@@ -131,8 +132,22 @@ exports.getReports = async (req, res) => {
     
     const totalSales = orders.reduce((sum, order) => sum + order.totalAmount, 0);
     
+    // Get all active products to ensure even 0-sale products are listed
+    const allProducts = await Product.find({ isActive: true });
+    
     // Get best-selling products
     const productSales = {};
+    
+    // Initialize with 0
+    allProducts.forEach(prod => {
+      if (prod.sizes && prod.sizes.length > 0) {
+        prod.sizes.forEach(size => {
+          const key = `${prod.name} - ${size.size}`;
+          productSales[key] = { name: key, quantity: 0, revenue: 0 };
+        });
+      }
+    });
+
     orders.forEach(order => {
       order.items.forEach(item => {
         const key = `${item.name} - ${item.size}`;

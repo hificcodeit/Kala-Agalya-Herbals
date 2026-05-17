@@ -241,65 +241,100 @@ export default function Landing() {
       </section>
 
       {/* Why Choose Us */}
-      <section className="py-24 bg-[#0a0f0a] relative">
-         <div className="absolute inset-0 bg-green-900/5 bg-[radial-gradient(circle_at_center,_transparent_0%,_#0a0f0a_100%)] pointer-events-none"></div>
+      <section className="py-24 relative bg-[#060502]">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-yellow-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+        
         <div className="max-w-7xl mx-auto px-4 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="scroll-animate text-3xl md:text-5xl font-bold text-white mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">Why Choose Kala Agalya Herbals Hair Oil?</h2>
-            <p className="text-lg text-gray-400">
-              We bring you the secrets of ancient Ayurveda, bottled with care and precision for the modern lifestyle.
+          <div className="text-center max-w-4xl mx-auto mb-20 scroll-animate">
+            <h2 className="text-4xl md:text-6xl font-extrabold text-white mb-6 tracking-tight drop-shadow-lg">
+              Why this <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-200">Hair Oil?</span>
+            </h2>
+            <p className="text-xl md:text-2xl text-yellow-500/80 font-medium italic">
+              "We bring you the secrets of ancient Ayurveda, bottled with care and precision for the modern lifestyle."
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { title: "Zero Chemicals", desc: "No parabens, sulphates, or mineral oils. Just pure nature.", icon: "🍃" },
-              { title: "Traditional Recipe", desc: "Made using age-old methods to preserve herbal potency.", icon: "🏺" },
-              { title: "Visible Results", desc: "Reduces hair fall and promotes growth in just 4 weeks.", icon: "✨" }
+              { img: "Home 1.png", title: "100% Ayurvedic Recipe", desc: "Ancient secrets formulated perfectly for modern, everyday hair care needs." },
+              { img: "home 2.png", title: "Zero Harmful Chemicals", desc: "Completely free from parabens, sulphates, mineral oils, and artificial colors." },
+              { img: "Home 3.png", title: "Proven Visible Results", desc: "Experience noticeable hair growth and significantly reduced hair fall in weeks." },
+              { img: "Home 4.png", title: "Deep Root Nourishment", desc: "Our oil penetrates deeply to strengthen your hair strands from the inside out." },
+              { img: "Home 5.png", title: "Scalp Cooling Effect", desc: "Alleviates stress and eliminates dandruff with natural cooling herbs like Vetiver." },
+              { img: "Home 6.png", title: "Restores Natural Shine", desc: "Locks in vital moisture and brings back your hair's beautiful, natural glow." }
             ].map((item, i) => (
-              <article key={i} className={`scroll-animate scroll-delay-${i + 1} bg-[#15120a] p-8 rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_25px_rgba(234,179,8,0.2)] transition-all duration-300 transform hover:-translate-y-2 group border border-yellow-500/10 hover:border-yellow-500/50`}>
-                <div className="text-5xl mb-6 bg-yellow-900/20 w-20 h-20 flex items-center justify-center rounded-2xl group-hover:bg-yellow-500/20 transition-colors shadow-[inset_0_0_10px_rgba(234,179,8,0.1)]">
-                  {item.icon}
+              <div key={i} className={`scroll-animate scroll-delay-${(i % 3) + 1} group relative h-[400px] rounded-3xl overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-yellow-500/20`}>
+                <div className="absolute inset-0 bg-[#0d0a04]"></div>
+                
+                {/* Background Image Container with proper scaling */}
+                <div className="absolute inset-0 top-0 h-3/4 overflow-hidden flex items-center justify-center p-6 bg-gradient-to-b from-[#1a1405] to-[#0d0a04]">
+                  <div className="absolute inset-0 bg-yellow-500/5 mix-blend-overlay"></div>
+                  <img 
+                    src={`/images/${item.img}`} 
+                    alt={item.title} 
+                    className="w-full h-full object-contain transform group-hover:scale-110 group-hover:-translate-y-4 transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] drop-shadow-[0_10px_20px_rgba(234,179,8,0.3)] filter brightness-90 group-hover:brightness-110" 
+                  />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-yellow-400 transition-colors">{item.title}</h3>
-                <p className="text-gray-400 leading-relaxed group-hover:text-gray-300">{item.desc}</p>
-              </article>
+
+                {/* Content Overlay */}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/90 to-transparent pt-20 pb-8 px-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                  <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-yellow-400 transition-colors drop-shadow-md">{item.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">{item.desc}</p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Ingredients Scroll */}
-      <section id="ingredients" className="py-20 bg-transparent overflow-hidden relative">
-        <div className="max-w-7xl mx-auto px-4 mb-12 relative z-10">
-          <h2 className="scroll-animate text-3xl font-bold text-white text-center drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">Powered by 18+ Rare Naturopathy Herbs</h2>
-          <p className="scroll-animate scroll-delay-1 text-center text-gray-400 mt-4 max-w-2xl mx-auto">
-             Each bottle is infused with a potent blend of 18+ herbs, carefully selected for their unique hair-nourishing properties.
-          </p>
-        </div>
-        
-        <div className="flex justify-center gap-8 flex-wrap max-w-7xl mx-auto transition-all duration-500 ease-in-out relative z-10">
-          {visibleIngredients.map((item, i) => (
-            <div key={i} className={`scroll-animate scroll-delay-${(i % 6) + 1} group relative w-40 text-center cursor-pointer`}>
-              <div className="w-28 h-28 mx-auto rounded-full overflow-hidden border-2 border-yellow-500/30 shadow-[0_0_15px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300 ring-4 ring-transparent group-hover:ring-yellow-400/50 group-hover:shadow-[0_0_20px_rgba(234,179,8,0.4)]">
-                <img src={item.img} alt={`Kala Agalya Herbal ingredient: ${item.name}`} className="w-full h-full object-cover filter brightness-90 group-hover:brightness-110 transition-all" />
+      {/* Ingredients Section */}
+      <section id="ingredients" className="py-24 bg-[#0a0802] relative border-t border-yellow-900/30">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent"></div>
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          <div className="text-center mb-16 scroll-animate">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">
+              Powered by 18+ Rare Herbs
+            </h2>
+            <p className="text-gray-400 mt-6 max-w-2xl mx-auto text-lg">
+               Each bottle is infused with a potent blend of pure herbs, carefully selected for their unique hair-nourishing properties.
+            </p>
+          </div>
+          
+          {/* Robust CSS Grid instead of Flex to prevent layout collapse */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 sm:gap-8">
+            {visibleIngredients.map((item, i) => (
+              <div key={i} className={`scroll-animate scroll-delay-${(i % 6) + 1} group flex flex-col items-center justify-start text-center p-4 bg-[#15120a] rounded-3xl border border-yellow-900/30 hover:border-yellow-500/50 hover:bg-[#1a170d] transition-all duration-300 hover:shadow-[0_10px_30px_rgba(234,179,8,0.15)]`}>
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden mb-5 border-2 border-yellow-500/20 group-hover:border-yellow-400 transition-colors relative shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
+                  <div className="absolute inset-0 bg-yellow-500/20 opacity-0 group-hover:opacity-100 transition-opacity z-10 mix-blend-overlay"></div>
+                  <img 
+                    src={item.img} 
+                    alt={`Ingredient: ${item.name}`} 
+                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out" 
+                  />
+                </div>
+                <h4 className="font-bold text-gray-200 group-hover:text-yellow-400 transition-colors text-sm sm:text-base mb-2">{item.name}</h4>
+                <span className="text-[10px] sm:text-xs text-lime-400 font-bold bg-lime-900/30 border border-lime-500/30 px-3 py-1 rounded-full uppercase tracking-wider">
+                  {item.benefit}
+                </span>
               </div>
-              <h4 className="mt-4 font-bold text-gray-200 group-hover:text-yellow-300 transition-colors">{item.name}</h4>
-              <p className="text-xs text-lime-400 font-medium bg-lime-900/20 border border-lime-500/20 inline-block px-2 py-1 rounded-full mt-1">
-                {item.benefit}
-              </p>
-            </div>
-          ))}
-        </div>
-        
-        <div className="text-center mt-12 relative z-10">
-          <button 
-            onClick={() => setShowAllIngredients(!showAllIngredients)}
-            className="text-yellow-500 font-bold hover:text-yellow-400 flex items-center justify-center gap-2 mx-auto bg-yellow-900/20 border border-yellow-500/30 px-6 py-2 rounded-full hover:bg-yellow-900/40 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all"
-          >
-            {showAllIngredients ? "Show Less" : "View all 18+ ingredients"}
-            <span className={`text-xl transition-transform duration-300 ${showAllIngredients ? '-rotate-90' : 'rotate-90'}`}>→</span>
-          </button>
+            ))}
+          </div>
+          
+          <div className="text-center mt-16 scroll-animate">
+            <button 
+              onClick={() => setShowAllIngredients(!showAllIngredients)}
+              className="group relative px-8 py-4 bg-transparent border-2 border-yellow-600 text-yellow-500 font-bold rounded-xl overflow-hidden hover:text-black transition-colors shadow-[0_0_20px_rgba(234,179,8,0.2)]"
+            >
+              <div className="absolute inset-0 bg-yellow-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] -z-10"></div>
+              <span className="flex items-center gap-3">
+                {showAllIngredients ? "Show Less" : "View all 18+ ingredients"}
+                <span className={`text-xl transform transition-transform duration-500 ${showAllIngredients ? 'rotate-180' : 'rotate-0 group-hover:translate-y-1'}`}>
+                  ↓
+                </span>
+              </span>
+            </button>
+          </div>
         </div>
       </section>
 
