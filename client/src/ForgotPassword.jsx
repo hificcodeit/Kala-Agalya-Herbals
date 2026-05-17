@@ -13,7 +13,7 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch("https://kala-agalya-herbals.onrender.com/api/users/forgotpassword", {
+      const response = await fetch("https://kala-agalya-herbals-production.up.railway.app/api/users/forgotpassword", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -43,10 +43,10 @@ export default function ForgotPassword() {
       <div className="relative bg-[#15120a] border border-yellow-900/40 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md p-8 backdrop-blur-xl">
         <div className="text-center mb-8">
           <div className="relative inline-block mb-4">
-             <div className="absolute inset-0 bg-yellow-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
-             <div className="relative bg-gradient-to-br from-yellow-900 to-[#0d0b03] w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl border border-yellow-500/30 transform rotate-3 p-3">
-                <img src="/images/icons/logo.png" alt="Kala Agalya Herbals" className="w-full h-auto drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
-             </div>
+            <div className="absolute inset-0 bg-yellow-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
+            <div className="relative bg-gradient-to-br from-yellow-900 to-[#0d0b03] w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl border border-yellow-500/30 transform rotate-3 p-3">
+              <img src="/images/icons/logo.png" alt="Kala Agalya Herbals" className="w-full h-auto drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
+            </div>
           </div>
           <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600 tracking-wide mb-2">
             Forgot Password
