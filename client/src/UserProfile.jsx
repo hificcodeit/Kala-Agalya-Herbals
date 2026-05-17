@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "./Alert";
 import Avatar from "./Avatar";
 import { API_URL } from "./services/api";
@@ -11,7 +11,7 @@ export default function UserProfile() {
   const [updating, setUpdating] = useState(false);
   const [newProfilePic, setNewProfilePic] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [orders, setOrders] = useState([]);
+
   
   const [formData, setFormData] = useState({
     name: "",
@@ -74,14 +74,7 @@ export default function UserProfile() {
         }
       }
 
-      // Fetch Orders
-      const orderRes = await fetch(`${API_URL}/orders/my-orders`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const orderData = await orderRes.json();
-      if (orderData.success) {
-        setOrders(orderData.orders);
-      }
+
     } catch (err) {
       addToast("Server error", "error");
     } finally {
@@ -154,36 +147,7 @@ export default function UserProfile() {
     );
   }
 
-  const markAsDelivered = async (orderId) => {
-    try {
-      const token = localStorage.getItem("userToken");
-      const res = await fetch(`${API_URL}/orders/${orderId}/customer-status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: "Delivered" })
-      });
-      const data = await res.json();
-      if (data.success) {
-        addToast("Order marked as Delivered!", "success");
-        setOrders(orders.map(o => o._id === orderId ? { ...o, orderStatus: "Delivered" } : o));
-      } else {
-        addToast(data.message || "Failed to update status", "error");
-      }
-    } catch (err) {
-      addToast("Server error", "error");
-    }
-  };
 
-  const statusMap = {
-    "Pending": { level: 1, label: "Placed", icon: "⏳", color: "text-orange-500", border: "border-orange-500", bg: "bg-orange-500" },
-    "Packed": { level: 2, label: "Packed", icon: "📦", color: "text-blue-500", border: "border-blue-500", bg: "bg-blue-500" },
-    "Shipped": { level: 3, label: "Dispatched", icon: "🚚", color: "text-purple-500", border: "border-purple-500", bg: "bg-purple-500" },
-    "Delivered": { level: 4, label: "Delivered", icon: "✅", color: "text-green-500", border: "border-green-500", bg: "bg-green-500" },
-    "Cancelled": { level: 0, label: "Cancelled", icon: "❌", color: "text-red-500", border: "border-red-500", bg: "bg-red-500" },
-  };
 
   return (
     <div className="min-h-screen bg-[#0d0b03] text-gray-200 font-sans selection:bg-yellow-500 selection:text-black">
@@ -456,87 +420,23 @@ export default function UserProfile() {
               </div>
             </div>
             
-            {/* My Orders Section */}
+            {/* My Orders Link */}
             <div className="md:col-span-2 mt-4">
-              <div className="scroll-animate bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-32 h-32 bg-yellow-500/5 -ml-16 -mt-16 rounded-full blur-3xl"></div>
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20">
-                    <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+              <Link to="/my-orders" className="block scroll-animate bg-[#15120a] border border-yellow-900/30 p-8 rounded-3xl shadow-2xl relative overflow-hidden group hover:border-yellow-500/30 transition-all">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-yellow-500/5 -ml-16 -mt-16 rounded-full blur-3xl group-hover:bg-yellow-500/10 transition-colors"></div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition-transform">
+                      <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-yellow-500/80 uppercase tracking-[0.3em]">My Orders</h3>
+                      <p className="text-xs text-gray-500 mt-1">View order history, track deliveries & download invoices</p>
+                    </div>
                   </div>
-                  <h3 className="text-sm font-bold text-yellow-500/80 uppercase tracking-[0.3em]">My Orders ({orders.length})</h3>
+                  <svg className="w-5 h-5 text-gray-600 group-hover:text-yellow-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </div>
-
-                {orders.length === 0 ? (
-                  <div className="text-center py-12 bg-[#0d0b03] rounded-2xl border border-yellow-900/10">
-                    <p className="text-gray-500 uppercase tracking-widest text-xs font-bold">No orders yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                    {orders.map((order) => {
-                      const statusInfo = statusMap[order.orderStatus] || statusMap["Pending"];
-                      const currentLvl = statusInfo.level;
-                      
-                      return (
-                        <div key={order._id} className="bg-[#0d0b03] border border-yellow-900/20 rounded-2xl p-6 flex flex-col lg:flex-row gap-6 lg:items-center">
-                          {/* Order Details */}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className="text-white font-bold uppercase tracking-widest text-sm">Order #{order._id.slice(-8).toUpperCase()}</span>
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest bg-[#15120a] border ${statusInfo.border} ${statusInfo.color}`}>
-                                {statusInfo.icon} {statusInfo.label}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">
-                              {new Date(order.createdAt).toLocaleDateString()} • {order.items.length} Items • ₹{order.totalAmount}
-                            </p>
-                            
-                            {/* Tracking Timeline */}
-                            {order.orderStatus !== "Cancelled" && (
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center w-full max-w-full lg:max-w-md mt-6 mb-2 pl-4 sm:pl-0 gap-6 sm:gap-0">
-                                {[
-                                  { lvl: 1, label: "Placed" },
-                                  { lvl: 2, label: "Packed" },
-                                  { lvl: 3, label: "Dispatched" },
-                                  { lvl: 4, label: "Delivered" }
-                                ].map((step, idx) => {
-                                  const isActive = currentLvl >= step.lvl;
-                                  return (
-                                    <div key={step.lvl} className="flex-1 flex flex-col sm:flex-row items-start sm:items-center relative w-full sm:w-auto">
-                                      <div className="relative flex flex-row sm:flex-col items-center gap-4 sm:gap-0 z-10 w-full sm:w-auto">
-                                        <div className={`w-4 h-4 shrink-0 rounded-full border-2 ${isActive ? 'bg-yellow-500 border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]' : 'bg-[#15120a] border-gray-700'}`}></div>
-                                        <span className={`static sm:absolute sm:top-6 sm:left-1/2 sm:-translate-x-1/2 text-xs sm:text-[9px] font-bold uppercase tracking-widest sm:tracking-tighter sm:whitespace-nowrap ${isActive ? 'text-yellow-500' : 'text-gray-600'}`}>{step.label}</span>
-                                      </div>
-                                      {/* Vertical Line on mobile */}
-                                      {idx < 3 && (
-                                        <div className={`absolute left-2 sm:hidden top-4 w-[2px] h-[calc(100%+16px)] -m-[1px] ${currentLvl > step.lvl ? 'bg-yellow-500' : 'bg-gray-800'}`}></div>
-                                      )}
-                                      {/* Horizontal Line on tablet/desktop */}
-                                      {idx < 3 && (
-                                        <div className={`hidden sm:block h-[2px] w-full -ml-[2px] -mr-[2px] ${currentLvl > step.lvl ? 'bg-yellow-500' : 'bg-gray-800'}`}></div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Action Button */}
-                          {order.orderStatus === "Shipped" && (
-                            <button
-                              onClick={() => markAsDelivered(order._id)}
-                              className="w-full lg:w-auto px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 border border-green-500/50 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all transform hover:-translate-y-0.5"
-                            >
-                              Confirm Delivery
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              </Link>
             </div>
           </div>
         )}

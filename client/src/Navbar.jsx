@@ -71,6 +71,11 @@ export default function Navbar() {
             <span className="absolute bottom-0 left-0 w-full h-0.5 bg-yellow-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left shadow-[0_0_10px_#facc15]"></span>
           </Link>
 
+          <Link to="/my-orders" className="relative group overflow-hidden py-2">
+            <span className="relative z-10 group-hover:text-yellow-300 transition-colors duration-300">My Orders</span>
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-yellow-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left shadow-[0_0_10px_#facc15]"></span>
+          </Link>
+
           <Link to="/profile" className="relative hover:scale-110 transition-transform duration-300 group">
              <Avatar src={avatar} name={userName} size="sm" />
           </Link>
@@ -135,6 +140,7 @@ export default function Navbar() {
         <div className={`relative h-full flex flex-col items-center justify-center space-y-8 transition-transform duration-500 ${isMenuOpen ? 'translate-y-0' : '-translate-y-full'}`}>
           <Link to="/" onClick={closeMenu} className="text-3xl font-bold text-white hover:text-yellow-400 transition-colors">Home</Link>
           <Link to="/product" onClick={closeMenu} className="text-3xl font-bold text-white hover:text-yellow-400 transition-colors">Product</Link>
+          <Link to="/my-orders" onClick={closeMenu} className="text-3xl font-bold text-white hover:text-yellow-400 transition-colors">My Orders</Link>
           <Link to="/profile" onClick={closeMenu} className="text-3xl font-bold text-white hover:text-yellow-400 transition-colors">Profile</Link>
           <Link to="/cart" onClick={closeMenu} className="text-3xl font-bold text-white hover:text-yellow-400 transition-colors">Cart ({count})</Link>
           <Link to="/contact" onClick={closeMenu} className="text-3xl font-bold text-white hover:text-yellow-400 transition-colors">Contact</Link>

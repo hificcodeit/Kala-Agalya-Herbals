@@ -221,10 +221,16 @@ exports.getOrderById = async (req, res) => {
  */
 exports.getUserOrders = async (req, res) => {
   try {
-    const email = req.user.email;
+    const email = req.user?.email;
+    console.log("[getUserOrders] Fetching orders for email:", email);
+    if (!email) {
+      return res.status(400).json({ success: false, message: "User email not found in token" });
+    }
     const orders = await Order.find({ "customer.email": email }).sort({ createdAt: -1 });
+    console.log("[getUserOrders] Found", orders.length, "orders");
     res.json({ success: true, orders });
   } catch (err) {
+    console.error("[getUserOrders] ERROR:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -16,6 +16,7 @@ import UserLogin from "./UserLogin";
 import Register from "./Register";
 import ForgotPassword from "./ForgotPassword";
 import UserProfile from "./UserProfile";
+import MyOrders from "./MyOrders";
 import ResetPassword from "./ResetPassword";
 import AuthRoute from "./AuthRoute";
 import AdminReports from "./AdminReports";
@@ -70,6 +71,14 @@ function Layout() {
             element={
               <AuthRoute>
                 <UserProfile />
+              </AuthRoute>
+            }
+          />
+          <Route
+            path="/my-orders"
+            element={
+              <AuthRoute>
+                <MyOrders />
               </AuthRoute>
             }
           />
