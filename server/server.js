@@ -35,14 +35,8 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// Security: Strict rate limiter for auth routes — 5 attempts per 15 minutes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { success: false, message: "Too many login attempts. Please try again after 15 minutes." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Auth limiter removed for development
+
 
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
@@ -50,7 +44,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/orders", require("./routes/orderRoutes"));
-app.use("/api/admin", authLimiter, require("./routes/adminRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/products", require("./routes/productRoutes"));
 app.use("/api/admin/orders", require("./routes/adminOrderRoutes"));
 app.use("/api/reviews", require("./routes/reviewRoutes"));

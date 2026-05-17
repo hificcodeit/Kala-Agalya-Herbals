@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -55,7 +56,7 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch(`https://kala-agalya-herbals.onrender.com/api/users/resetpassword/${token}`, {
+      const response = await fetch(`${API_URL}/users/resetpassword/${token}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -133,10 +134,10 @@ export default function ResetPassword() {
         {/* Logo + Header */}
         <div className="text-center mb-8">
           <div className="relative inline-block mb-4">
-             <div className="absolute inset-0 bg-yellow-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
-             <div className="relative bg-gradient-to-br from-yellow-900 to-[#0d0b03] w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl border border-yellow-500/30 transform rotate-3 p-3">
-                <img src="/images/icons/logo.png" alt="Kala Agalya Herbals" className="w-full h-auto drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
-             </div>
+            <div className="absolute inset-0 bg-yellow-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
+            <div className="relative bg-gradient-to-br from-yellow-900 to-[#0d0b03] w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl border border-yellow-500/30 transform rotate-3 p-3">
+              <img src="/images/icons/logo.png" alt="Kala Agalya Herbals" className="w-full h-auto drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
+            </div>
           </div>
           <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600 tracking-wide mb-2">
             Reset Password
@@ -185,20 +186,18 @@ export default function ResetPassword() {
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Password Requirements</p>
               {policyResults.map((rule) => (
                 <div key={rule.id} className="flex items-center gap-2.5">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                    rule.passed
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${rule.passed
                       ? "bg-green-500/20 border border-green-500/50"
                       : "bg-red-500/10 border border-red-500/30"
-                  }`}>
+                    }`}>
                     {rule.passed ? (
                       <svg className="w-2.5 h-2.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                     ) : (
                       <svg className="w-2.5 h-2.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                     )}
                   </div>
-                  <span className={`text-xs transition-colors duration-300 ${
-                    rule.passed ? "text-green-400/80" : "text-gray-500"
-                  }`}>
+                  <span className={`text-xs transition-colors duration-300 ${rule.passed ? "text-green-400/80" : "text-gray-500"
+                    }`}>
                     {rule.label}
                   </span>
                 </div>
@@ -215,13 +214,12 @@ export default function ResetPassword() {
                 type={showConfirm ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`w-full pl-12 pr-12 py-4 bg-[#0d0b03] text-yellow-100 border rounded-xl transition-all placeholder-gray-800 ${
-                  confirmPassword.length > 0
+                className={`w-full pl-12 pr-12 py-4 bg-[#0d0b03] text-yellow-100 border rounded-xl transition-all placeholder-gray-800 ${confirmPassword.length > 0
                     ? passwordsMatch
                       ? "border-green-500/50 focus:border-green-500"
                       : "border-red-500/50 focus:border-red-500"
                     : "border-yellow-900/40 focus:border-yellow-500"
-                }`}
+                  }`}
                 placeholder="Re-enter your password"
                 required
                 autoComplete="new-password"
@@ -246,9 +244,8 @@ export default function ResetPassword() {
             </div>
             {/* Match indicator */}
             {confirmPassword.length > 0 && (
-              <p className={`text-xs mt-2 ml-1 flex items-center gap-1.5 transition-colors ${
-                passwordsMatch ? "text-green-400/70" : "text-red-400/70"
-              }`}>
+              <p className={`text-xs mt-2 ml-1 flex items-center gap-1.5 transition-colors ${passwordsMatch ? "text-green-400/70" : "text-red-400/70"
+                }`}>
                 {passwordsMatch ? (
                   <>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>

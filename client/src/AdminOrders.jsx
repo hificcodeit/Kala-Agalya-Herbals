@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
@@ -11,9 +12,9 @@ export default function AdminOrders() {
   const fetchOrders = useCallback(async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch("https://kala-agalya-herbals.onrender.com/api/admin/orders", {
-        headers: { 
-          "Authorization": `Bearer ${token}` 
+      const response = await fetch(`${API_URL}/admin/orders`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
         },
       });
       const data = await response.json();
@@ -61,7 +62,7 @@ export default function AdminOrders() {
   const handleFastUpdate = async (orderId, newStatus) => {
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`https://kala-agalya-herbals.onrender.com/api/admin/orders/${orderId}/status`, {
+      const res = await fetch(`${API_URL}/admin/orders/${orderId}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -87,21 +88,20 @@ export default function AdminOrders() {
 
       {/* Filters */}
       <div className="bg-[#111a11] rounded-2xl border border-yellow-500/10 p-2 mb-8 flex flex-wrap gap-2">
-          {["all", "Pending", "Packed", "Shipped", "Delivered"].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={`px-6 py-2 rounded-xl font-bold transition-all duration-300 relative overflow-hidden group text-xs uppercase tracking-wider ${
-                filter === status
-                  ? "text-black bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
+        {["all", "Pending", "Packed", "Shipped", "Delivered"].map((status) => (
+          <button
+            key={status}
+            onClick={() => setFilter(status)}
+            className={`px-6 py-2 rounded-xl font-bold transition-all duration-300 relative overflow-hidden group text-xs uppercase tracking-wider ${filter === status
+                ? "text-black bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                : "text-gray-400 hover:text-white hover:bg-white/5"
               }`}
-            >
-              <span className="relative z-10">
-                {status} {status === "all" ? `(${orders.length})` : `(${orders.filter(o => o.orderStatus === status).length})`}
-              </span>
-            </button>
-          ))}
+          >
+            <span className="relative z-10">
+              {status} {status === "all" ? `(${orders.length})` : `(${orders.filter(o => o.orderStatus === status).length})`}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Orders Table */}
@@ -161,9 +161,9 @@ export default function AdminOrders() {
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex flex-col items-center gap-2">
                           <label className="relative inline-flex items-center cursor-pointer group">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
                               checked={order.orderStatus === "Shipped" || order.orderStatus === "Delivered"}
                               onChange={(e) => handleFastUpdate(order._id, e.target.checked ? "Shipped" : "Pending")}
                               disabled={order.orderStatus === "Delivered" || order.orderStatus === "Cancelled"}
@@ -173,13 +173,13 @@ export default function AdminOrders() {
                               Dispatched
                             </span>
                           </label>
-                          
+
                           {(order.orderStatus === "Shipped") && (
                             <button
-                               onClick={() => handleFastUpdate(order._id, "Delivered")}
-                               className="px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/30 rounded text-[9px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-all w-24 text-center mt-1"
+                              onClick={() => handleFastUpdate(order._id, "Delivered")}
+                              className="px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/30 rounded text-[9px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-all w-24 text-center mt-1"
                             >
-                               Mark Delivered
+                              Mark Delivered
                             </button>
                           )}
                         </div>

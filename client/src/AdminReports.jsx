@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -37,11 +38,11 @@ export default function AdminReports() {
     try {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(
-        `https://kala-agalya-herbals.onrender.com/api/admin/orders/reports/data?startDate=${startDate}&endDate=${endDate}`,
-        { 
-          headers: { 
-            "Authorization": `Bearer ${token}` 
-          } 
+        `${API_URL}/admin/orders/reports/data?startDate=${startDate}&endDate=${endDate}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
         }
       );
       const data = await response.json();
@@ -134,10 +135,10 @@ export default function AdminReports() {
       {/* Date Range Selector */}
       <div className="bg-[#111a11] rounded-2xl border border-yellow-500/10 shadow-lg p-6 sm:p-8 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 blur-[100px] rounded-full pointer-events-none"></div>
-        
+
         <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-           <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-           Select Report Period
+          <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          Select Report Period
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
@@ -206,7 +207,7 @@ export default function AdminReports() {
             </div>
 
             <div className="bg-[#111a11] border border-yellow-500/20 rounded-2xl shadow-xl p-6 sm:p-8 relative overflow-hidden group hover:border-yellow-500/40 transition-colors">
-               <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full group-hover:bg-emerald-500/20 transition-all duration-500"></div>
+              <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full group-hover:bg-emerald-500/20 transition-all duration-500"></div>
               <div className="flex items-center justify-between relative z-10">
                 <div>
                   <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Total Revenue</p>
@@ -292,22 +293,22 @@ export default function AdminReports() {
 
           {/* Export Button */}
           <div className="bg-[#111a11] border border-yellow-500/10 rounded-2xl shadow-lg p-6 sm:p-8 mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="text-center md:text-left">
-                <h2 className="text-xl font-bold text-white mb-2">Export Data</h2>
-                <p className="text-sm text-gray-400">
-                  Full history from <span className="text-yellow-400 font-bold">{new Date(startDate).toLocaleDateString()}</span> to{" "}
-                  <span className="text-yellow-400 font-bold">{new Date(endDate).toLocaleDateString()}</span>
-                </p>
-              </div>
-              <button
-                onClick={downloadExcel}
-                className="bg-gray-800 text-white px-8 py-4 rounded-xl font-bold hover:bg-yellow-600 hover:text-black transition-all transform hover:scale-105 flex items-center gap-3 shadow-lg border border-gray-700 hover:border-yellow-500 group text-xs uppercase tracking-widest w-full md:w-auto justify-center"
-              >
-                <svg className="w-5 h-5 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Download CSV
-              </button>
+            <div className="text-center md:text-left">
+              <h2 className="text-xl font-bold text-white mb-2">Export Data</h2>
+              <p className="text-sm text-gray-400">
+                Full history from <span className="text-yellow-400 font-bold">{new Date(startDate).toLocaleDateString()}</span> to{" "}
+                <span className="text-yellow-400 font-bold">{new Date(endDate).toLocaleDateString()}</span>
+              </p>
+            </div>
+            <button
+              onClick={downloadExcel}
+              className="bg-gray-800 text-white px-8 py-4 rounded-xl font-bold hover:bg-yellow-600 hover:text-black transition-all transform hover:scale-105 flex items-center gap-3 shadow-lg border border-gray-700 hover:border-yellow-500 group text-xs uppercase tracking-widest w-full md:w-auto justify-center"
+            >
+              <svg className="w-5 h-5 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download CSV
+            </button>
           </div>
 
           {/* Table */}
@@ -320,7 +321,7 @@ export default function AdminReports() {
                 <thead className="bg-[#000]/40">
                   <tr>
                     {["Order ID", "Customer", "Amount", "Status", "Date"].map((head) => (
-                        <th key={head} className="px-6 sm:px-8 py-5 text-left text-[10px] font-bold text-yellow-500/70 uppercase tracking-widest whitespace-nowrap">{head}</th>
+                      <th key={head} className="px-6 sm:px-8 py-5 text-left text-[10px] font-bold text-yellow-500/70 uppercase tracking-widest whitespace-nowrap">{head}</th>
                     ))}
                   </tr>
                 </thead>
@@ -336,13 +337,12 @@ export default function AdminReports() {
                       </td>
                       <td className="px-6 sm:px-8 py-5 whitespace-nowrap">
                         <span
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${
-                            order.orderStatus === "Delivered"
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${order.orderStatus === "Delivered"
                               ? "bg-green-500/10 text-green-500"
                               : order.orderStatus === "Cancelled"
-                              ? "bg-red-500/10 text-red-500"
-                              : "bg-blue-500/10 text-blue-500"
-                          }`}
+                                ? "bg-red-500/10 text-red-500"
+                                : "bg-blue-500/10 text-blue-500"
+                            }`}
                         >
                           {order.orderStatus}
                         </span>

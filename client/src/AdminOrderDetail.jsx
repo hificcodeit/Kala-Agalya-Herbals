@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -15,9 +16,9 @@ export default function AdminOrderDetail() {
   const fetchOrder = useCallback(async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`https://kala-agalya-herbals.onrender.com/api/admin/orders/${id}`, {
-        headers: { 
-          "Authorization": `Bearer ${token}` 
+      const response = await fetch(`${API_URL}/admin/orders/${id}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
         },
       });
       const data = await response.json();
@@ -47,11 +48,11 @@ export default function AdminOrderDetail() {
     setUpdating(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`https://kala-agalya-herbals.onrender.com/api/admin/orders/${id}/status`, {
+      const response = await fetch(`${API_URL}/admin/orders/${id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` 
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ orderStatus: newStatus }),
       });
@@ -96,8 +97,8 @@ export default function AdminOrderDetail() {
     <AdminLayout>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-10">
         <div className="flex items-center gap-6">
-          <Link 
-            to="/admin/orders" 
+          <Link
+            to="/admin/orders"
             className="group relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold text-yellow-500 bg-[#0d0b03] border border-yellow-500/20 hover:border-yellow-500/60 transition-all uppercase tracking-widest"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 transform group-hover:-translate-x-1 transition-transform relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -112,7 +113,7 @@ export default function AdminOrderDetail() {
             </p>
           </div>
         </div>
-        
+
         <div className="text-left sm:text-right">
           <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Order Date</p>
           <p className="font-bold text-white text-sm">
@@ -133,8 +134,8 @@ export default function AdminOrderDetail() {
           <div className="bg-[#111a11] rounded-2xl shadow-xl p-8 border border-yellow-500/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 blur-[60px] rounded-full"></div>
             <h2 className="text-xl font-bold text-white mb-8 flex items-center border-b border-yellow-900/10 pb-4">
-               <Avatar src={order.customer.avatar} name={order.customer.name} size="sm" className="mr-3" />
-               Customer Details
+              <Avatar src={order.customer.avatar} name={order.customer.name} size="sm" className="mr-3" />
+              Customer Details
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
@@ -171,11 +172,11 @@ export default function AdminOrderDetail() {
           {/* Ordered Products */}
           <div className="bg-[#111a11] rounded-2xl shadow-xl p-8 border border-yellow-500/10 relative overflow-hidden">
             <h2 className="text-xl font-bold text-white mb-8 flex items-center border-b border-yellow-900/10 pb-4">
-               <div className="bg-green-900/20 p-2 rounded-xl mr-3 border border-yellow-500/20">
-                  <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-green-900/20 p-2 rounded-xl mr-3 border border-yellow-500/20">
+                <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-               </div>
+                </svg>
+              </div>
               Ordered Products
             </h2>
             <div className="space-y-6">
@@ -184,8 +185,8 @@ export default function AdminOrderDetail() {
                   <div className="flex-1">
                     <p className="font-bold text-white text-lg uppercase tracking-tight group-hover:text-yellow-400 transition-colors">{item.name}</p>
                     <div className="flex items-center gap-3 mt-2">
-                       <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">Size: <span className="text-yellow-500">{item.size}</span></p>
-                       <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">Qty: <span className="text-yellow-500">{item.quantity}</span></p>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">Size: <span className="text-yellow-500">{item.size}</span></p>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">Qty: <span className="text-yellow-500">{item.quantity}</span></p>
                     </div>
                   </div>
                   <div className="text-left sm:text-right min-w-[120px] pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5 w-full sm:w-auto">
@@ -209,11 +210,11 @@ export default function AdminOrderDetail() {
           {/* Payment Information */}
           <div className="bg-[#111a11] rounded-2xl shadow-xl p-8 border border-yellow-500/10 relative overflow-hidden group">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center">
-               <div className="bg-yellow-900/20 p-2 rounded-xl mr-3 border border-yellow-500/10">
-                  <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-yellow-900/20 p-2 rounded-xl mr-3 border border-yellow-500/10">
+                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-               </div>
+                </svg>
+              </div>
               Transaction Info
             </h2>
             <div className="space-y-6">
@@ -226,11 +227,10 @@ export default function AdminOrderDetail() {
               <div>
                 <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2 font-bold">Payment Status</p>
                 <span
-                  className={`inline-flex items-center px-4 py-2 rounded-xl text-xs font-black tracking-widest border shadow-lg ${
-                    order.paymentStatus === "PAID"
+                  className={`inline-flex items-center px-4 py-2 rounded-xl text-xs font-black tracking-widest border shadow-lg ${order.paymentStatus === "PAID"
                       ? "bg-green-500/10 text-green-500 border-green-500/40"
                       : "bg-red-500/10 text-red-500 border-red-500/40"
-                  }`}
+                    }`}
                 >
                   {order.paymentStatus === "PAID" && <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
                   {order.paymentStatus}
@@ -242,31 +242,29 @@ export default function AdminOrderDetail() {
           {/* Activity Logs / Control Panel */}
           <div className="bg-[#111a11] rounded-2xl shadow-xl p-8 border border-yellow-500/10 relative overflow-hidden">
             <h2 className="text-lg font-bold text-white mb-8 bg-yellow-900/10 -mx-8 px-8 py-3 border-y border-yellow-900/10 uppercase tracking-widest text-[10px]">Processing Control Panel</h2>
-            
+
             <div className="text-center mb-10">
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-4 font-bold">Current Logistics Status</p>
-                <div className="relative inline-block">
-                    <div className={`absolute inset-0 blur-2xl opacity-40 rounded-full scale-110 ${
-                        order.orderStatus === "Delivered" ? "bg-green-500" : 
-                        order.orderStatus === "Cancelled" ? "bg-red-500" :
-                        "bg-yellow-500"
-                    }`}></div>
-                    <span
-                    className={`relative z-10 inline-block px-10 py-5 rounded-2xl text-2xl font-black tracking-tighter uppercase border-2 shadow-2xl transition-all ${
-                        order.orderStatus === "Pending"
-                        ? "bg-orange-600 text-white border-white/20"
-                        : order.orderStatus === "Packed"
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-4 font-bold">Current Logistics Status</p>
+              <div className="relative inline-block">
+                <div className={`absolute inset-0 blur-2xl opacity-40 rounded-full scale-110 ${order.orderStatus === "Delivered" ? "bg-green-500" :
+                    order.orderStatus === "Cancelled" ? "bg-red-500" :
+                      "bg-yellow-500"
+                  }`}></div>
+                <span
+                  className={`relative z-10 inline-block px-10 py-5 rounded-2xl text-2xl font-black tracking-tighter uppercase border-2 shadow-2xl transition-all ${order.orderStatus === "Pending"
+                      ? "bg-orange-600 text-white border-white/20"
+                      : order.orderStatus === "Packed"
                         ? "bg-blue-600 text-white border-white/20"
                         : order.orderStatus === "Shipped"
-                        ? "bg-indigo-600 text-white border-white/20"
-                        : order.orderStatus === "Delivered"
-                        ? "bg-emerald-600 text-white border-white/20"
-                        : "bg-red-600 text-white border-white/20"
+                          ? "bg-indigo-600 text-white border-white/20"
+                          : order.orderStatus === "Delivered"
+                            ? "bg-emerald-600 text-white border-white/20"
+                            : "bg-red-600 text-white border-white/20"
                     }`}
-                    >
-                    {order.orderStatus}
-                    </span>
-                </div>
+                >
+                  {order.orderStatus}
+                </span>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -313,9 +311,9 @@ export default function AdminOrderDetail() {
                 </button>
               )}
               {order.orderStatus === "Delivered" && (
-                 <div className="bg-emerald-900/10 border border-emerald-500/20 p-4 rounded-xl text-center">
-                    <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Fulfillment Cycle Complete</p>
-                 </div>
+                <div className="bg-emerald-900/10 border border-emerald-500/20 p-4 rounded-xl text-center">
+                  <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Fulfillment Cycle Complete</p>
+                </div>
               )}
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -16,7 +17,8 @@ const PASSWORD_RULES = [
  * Registration component
  */
 
-export default function Register() {  const [name, setName] = useState("");
+export default function Register() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
@@ -59,10 +61,10 @@ export default function Register() {  const [name, setName] = useState("");
       formData.append("password", password);
       formData.append("phone", phone);
       if (profilePic) {
-        formData.append("avatar", profilePic); 
+        formData.append("avatar", profilePic);
       }
 
-      const response = await fetch("https://kala-agalya-herbals.onrender.com/api/users/register", {
+      const response = await fetch(`${API_URL}/users/register`, {
         method: "POST",
         body: formData,
       });
@@ -107,8 +109,8 @@ export default function Register() {  const [name, setName] = useState("");
             <div className="flex flex-col items-center mb-8">
               <div className="relative group">
                 <Avatar src={preview} name={name} size="lg" className="border-dashed" />
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   accept="image/*"
                   className="absolute inset-0 opacity-0 cursor-pointer"
                   onChange={(e) => {
@@ -120,13 +122,13 @@ export default function Register() {  const [name, setName] = useState("");
                   }}
                 />
                 {preview && (
-                   <button 
-                     type="button"
-                     onClick={() => { setProfilePic(null); setPreview(null); }}
-                     className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
-                   >
-                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setProfilePic(null); setPreview(null); }}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
                 )}
               </div>
               <p className="text-[10px] text-gray-500 mt-3 uppercase tracking-widest font-bold">Upload Identity Photo</p>
@@ -160,7 +162,7 @@ export default function Register() {  const [name, setName] = useState("");
                 </label>
                 <div className="relative">
                   <input
-                     id="email"
+                    id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -205,13 +207,12 @@ export default function Register() {  const [name, setName] = useState("");
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full pl-12 pr-12 py-4 bg-[#0d0b03] text-yellow-100 border rounded-xl transition-all placeholder-gray-800 text-sm shadow-inner ${
-                      password.length > 0 
-                        ? allPoliciesPassed 
-                          ? "border-green-500/50 focus:border-green-500" 
+                    className={`w-full pl-12 pr-12 py-4 bg-[#0d0b03] text-yellow-100 border rounded-xl transition-all placeholder-gray-800 text-sm shadow-inner ${password.length > 0
+                        ? allPoliciesPassed
+                          ? "border-green-500/50 focus:border-green-500"
                           : "border-red-500/50 focus:border-red-500"
                         : "border-yellow-900/40 focus:border-yellow-500"
-                    }`}
+                      }`}
                     placeholder="••••••••"
                     required
                   />
@@ -238,13 +239,12 @@ export default function Register() {  const [name, setName] = useState("");
                   <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Security Checklist</p>
                   {policyResults.map((rule) => (
                     <div key={rule.id} className="flex items-center gap-3">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                        password.length === 0
-                        ? "bg-white/5 border border-white/10"
-                        : rule.passed
-                          ? "bg-green-500/20 border border-green-500/40"
-                          : "bg-red-500/10 border border-red-500/20"
-                      }`}>
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${password.length === 0
+                          ? "bg-white/5 border border-white/10"
+                          : rule.passed
+                            ? "bg-green-500/20 border border-green-500/40"
+                            : "bg-red-500/10 border border-red-500/20"
+                        }`}>
                         {password.length > 0 && (
                           rule.passed ? (
                             <svg className="w-2.5 h-2.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -253,13 +253,12 @@ export default function Register() {  const [name, setName] = useState("");
                           )
                         )}
                       </div>
-                      <span className={`text-xs transition-colors duration-300 ${
-                        password.length === 0 
-                        ? "text-gray-700"
-                        : rule.passed 
-                          ? "text-green-400/70" 
-                          : "text-gray-500"
-                      }`}>
+                      <span className={`text-xs transition-colors duration-300 ${password.length === 0
+                          ? "text-gray-700"
+                          : rule.passed
+                            ? "text-green-400/70"
+                            : "text-gray-500"
+                        }`}>
                         {rule.label}
                       </span>
                     </div>
@@ -276,13 +275,12 @@ export default function Register() {  const [name, setName] = useState("");
                     type={showConfirm ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full pl-12 pr-12 py-4 bg-[#0d0b03] text-yellow-100 border rounded-xl transition-all placeholder-gray-800 text-sm shadow-inner ${
-                      confirmPassword.length > 0
+                    className={`w-full pl-12 pr-12 py-4 bg-[#0d0b03] text-yellow-100 border rounded-xl transition-all placeholder-gray-800 text-sm shadow-inner ${confirmPassword.length > 0
                         ? passwordsMatch
                           ? "border-green-500/50 focus:border-green-500"
                           : "border-red-500/50 focus:border-red-500"
                         : "border-yellow-900/40 focus:border-yellow-500"
-                    }`}
+                      }`}
                     placeholder="Re-enter password"
                     required
                   />
@@ -304,9 +302,8 @@ export default function Register() {  const [name, setName] = useState("");
                   </button>
                 </div>
                 {confirmPassword.length > 0 && (
-                  <p className={`text-[10px] mt-2 ml-1 flex items-center gap-1.5 font-bold uppercase tracking-wider ${
-                    passwordsMatch ? "text-green-500/60" : "text-red-500/60"
-                  }`}>
+                  <p className={`text-[10px] mt-2 ml-1 flex items-center gap-1.5 font-bold uppercase tracking-wider ${passwordsMatch ? "text-green-500/60" : "text-red-500/60"
+                    }`}>
                     {passwordsMatch ? "Passwords Secured" : "Passwords mismatch"}
                   </p>
                 )}

@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import React from 'react';
 
 /**
@@ -11,7 +12,7 @@ const Avatar = ({ src, name, size = "md", className = "" }) => {
     if (!n) return '?';
     return n.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2);
   };
-  
+
   // Reset error state when src changes
   React.useEffect(() => {
     setError(false);
@@ -23,7 +24,7 @@ const Avatar = ({ src, name, size = "md", className = "" }) => {
     'from-yellow-700 to-yellow-900',
     'from-amber-600 to-yellow-800',
   ];
-  
+
   const getGradient = (n) => {
     if (!n) return gradients[0];
     const charCodeSum = n.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -41,15 +42,15 @@ const Avatar = ({ src, name, size = "md", className = "" }) => {
 
   // Convert relative paths (uploads) to full URLs, keep Google or data URLs as is
   const cleanSrc = (src && typeof src === 'string' && src.trim() !== '' && !src.includes('undefined')) ? src : null;
-  const fullSrc = cleanSrc && (cleanSrc.startsWith('http') || cleanSrc.startsWith('data:image') ? cleanSrc : `https://kala-agalya-herbals.onrender.com${cleanSrc}`);
+  const fullSrc = cleanSrc && (cleanSrc.startsWith('http') || cleanSrc.startsWith('data:image') ? cleanSrc : `${BASE_URL.replace(/\/api$/, "")}${cleanSrc}`);
 
   return (
     <div className={`relative rounded-full overflow-hidden flex items-center justify-center border border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.1)] group transition-all duration-300 hover:border-yellow-500/50 ${sizeClasses[size] || size} ${className}`}>
       {(fullSrc && !error) ? (
-        <img 
-          src={fullSrc} 
-          alt={name || "User Avatar"} 
-          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" 
+        <img
+          src={fullSrc}
+          alt={name || "User Avatar"}
+          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
           onError={() => setError(true)}
         />
       ) : (
@@ -59,7 +60,7 @@ const Avatar = ({ src, name, size = "md", className = "" }) => {
           </span>
         </div>
       )}
-      
+
       {/* Decorative inner glow for premium feel */}
       <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-full pointer-events-none"></div>
     </div>

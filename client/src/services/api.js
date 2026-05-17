@@ -1,5 +1,5 @@
-export const API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
-export const BASE_URL = import.meta.env.VITE_API_URL || "";
+export const API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "https://kala-agalya-herbals-production.up.railway.app/api";
+export const BASE_URL = import.meta.env.VITE_API_URL || "https://kala-agalya-herbals-production.up.railway.app";
 
 export const createOrder = async (orderData) => {
   const token = localStorage.getItem("userToken");
