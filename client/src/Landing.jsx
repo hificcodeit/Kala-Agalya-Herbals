@@ -8,7 +8,7 @@ const heroSlides = [
     highlight: "Natural Shine",
     subtitle: "Experience the ancient power of 18+ rare herbs blended in pure coconut oil.",
     badge: "🌿 100% Naturopathy & Organic",
-    image: "/images/home.png",
+    image: "/images/Home 1.png",
     alt: "Naturopathy herbal hair oil bottle showcase - Kala Agalya Herbals"
   },
   {
@@ -16,7 +16,7 @@ const heroSlides = [
     highlight: "Roots From Within",
     subtitle: "Clinically proven formula enriched with Amla and Hibiscus to stop hair fall.",
     badge: "💪 Zero Hair Fall Guarantee",
-    image: "/images/home1.png",
+    image: "/images/home 2.png",
     alt: "Natural hair growth treatment with 18 rare herbs"
   },
   {
@@ -24,8 +24,32 @@ const heroSlides = [
     highlight: "In Every Drop",
     subtitle: "Free from parabens, sulfates, and mineral oils. Just pure nature.",
     badge: "✨ Premium Quality Promise",
-    image: "/images/home2.png",
+    image: "/images/Home 3.png",
     alt: "Organic hair oil chemical-free formula"
+  },
+  {
+    title: "Nourish Your",
+    highlight: "Scalp Deeply",
+    subtitle: "Soothe your scalp and eliminate dandruff with the cooling essence of Vetiver and Neem.",
+    badge: "🌱 Soothing Scalp Care",
+    image: "/images/Home 4.png",
+    alt: "Deep nourishment and scalp care"
+  },
+  {
+    title: "Restore Your",
+    highlight: "Natural Volume",
+    subtitle: "Stimulate new hair follicles with the richness of Fenugreek and Black Cumin.",
+    badge: "🌟 Volume Booster",
+    image: "/images/Home 5.png",
+    alt: "Hair volume and density restoration"
+  },
+  {
+    title: "Embrace The",
+    highlight: "Ayurvedic Secret",
+    subtitle: "A time-tested blend crafted to lock in moisture and protect from daily damage.",
+    badge: "🛡️ Complete Protection",
+    image: "/images/Home 6.png",
+    alt: "Ayurvedic hair protection and moisture"
   }
 ];
 
