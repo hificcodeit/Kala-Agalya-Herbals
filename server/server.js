@@ -9,6 +9,7 @@ const connectDB = require("./config/db");
 connectDB();
 
 const app = express();
+app.set("trust proxy", 1); // Trust the reverse proxy (Railway/Render) so rate limiter gets correct IPs
 app.use(cors({
   origin: [
     "http://localhost:3000",
