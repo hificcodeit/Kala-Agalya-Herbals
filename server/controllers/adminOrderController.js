@@ -145,8 +145,7 @@ exports.getReports = async (req, res) => {
     });
     
     const bestSelling = Object.values(productSales)
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
+      .sort((a, b) => b.quantity - a.quantity);
     
     res.json({
       success: true,

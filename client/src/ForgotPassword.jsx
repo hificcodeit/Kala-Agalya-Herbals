@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -13,7 +14,7 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch("https://kala-agalya-herbals-production.up.railway.app/api/users/forgotpassword", {
+      const response = await fetch(`${API_URL}/users/forgotpassword`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

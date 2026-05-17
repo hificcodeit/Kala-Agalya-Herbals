@@ -1,3 +1,4 @@
+import { API_URL, BASE_URL } from "./services/api";
 import { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "./Alert";
@@ -63,7 +64,7 @@ export default function Register() {
         formData.append("avatar", profilePic);
       }
 
-      const response = await fetch("https://kala-agalya-herbals-production.up.railway.app/api/users/register", {
+      const response = await fetch(`${API_URL}/users/register`, {
         method: "POST",
         body: formData,
       });
