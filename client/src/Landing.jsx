@@ -55,7 +55,6 @@ const heroSlides = [
 
 
 export default function Landing() {
-  const [showAllIngredients, setShowAllIngredients] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -84,8 +83,6 @@ export default function Landing() {
     { name: "Rosemary", img: "/images/rosemary.jpg", benefit: "Circulation" },
     { name: "Tanner's Cassia", img: "/images/tanners-cassia.jpg", benefit: "Antibacterial" },
   ];
-
-  const visibleIngredients = showAllIngredients ? ingredients : ingredients.slice(0, 6);
 
   const schemaData = {
     "@context": "https://schema.org",
@@ -303,7 +300,7 @@ export default function Landing() {
           
           {/* Robust CSS Grid instead of Flex to prevent layout collapse */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 sm:gap-8">
-            {visibleIngredients.map((item, i) => (
+            {ingredients.map((item, i) => (
               <div key={i} className={`scroll-animate scroll-delay-${(i % 6) + 1} group flex flex-col items-center justify-start text-center p-4 bg-[#15120a] rounded-3xl border border-yellow-900/30 hover:border-yellow-500/50 hover:bg-[#1a170d] transition-all duration-300 hover:shadow-[0_10px_30px_rgba(234,179,8,0.15)]`}>
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden mb-5 border-2 border-yellow-500/20 group-hover:border-yellow-400 transition-colors relative shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
                   <div className="absolute inset-0 bg-yellow-500/20 opacity-0 group-hover:opacity-100 transition-opacity z-10 mix-blend-overlay"></div>
@@ -319,21 +316,6 @@ export default function Landing() {
                 </span>
               </div>
             ))}
-          </div>
-          
-          <div className="text-center mt-16 scroll-animate">
-            <button 
-              onClick={() => setShowAllIngredients(!showAllIngredients)}
-              className="group relative px-8 py-4 bg-transparent border-2 border-yellow-600 text-yellow-500 font-bold rounded-xl overflow-hidden hover:text-black transition-colors shadow-[0_0_20px_rgba(234,179,8,0.2)]"
-            >
-              <div className="absolute inset-0 bg-yellow-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] -z-10"></div>
-              <span className="flex items-center gap-3">
-                {showAllIngredients ? "Show Less" : "View all 18+ ingredients"}
-                <span className={`text-xl transform transition-transform duration-500 ${showAllIngredients ? 'rotate-180' : 'rotate-0 group-hover:translate-y-1'}`}>
-                  ↓
-                </span>
-              </span>
-            </button>
           </div>
         </div>
       </section>

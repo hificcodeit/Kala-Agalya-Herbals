@@ -33,7 +33,7 @@ export default function AdminLayout({ children }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#0d0b03] text-gray-200 flex overflow-hidden font-sans selection:bg-yellow-500 selection:text-black">
+    <div className="min-h-screen bg-[#0d0b03] text-gray-200 flex font-sans selection:bg-yellow-500 selection:text-black">
       
       {/* Sidebar Overlay */}
       {isSidebarOpen && (
@@ -45,7 +45,7 @@ export default function AdminLayout({ children }) {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-[#0a0802] border-r border-yellow-900/30 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:sticky top-0 h-screen shrink-0 inset-y-0 left-0 z-50 w-72 bg-[#0a0802] border-r border-yellow-900/30 transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -137,7 +137,7 @@ export default function AdminLayout({ children }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative h-screen">
+      <main className="flex-1 relative min-h-screen">
         {/* Mobile Header */}
         <div className="lg:hidden h-16 bg-[#0a0802] border-b border-yellow-900/30 flex items-center justify-between px-4 sticky top-0 z-40 backdrop-blur-md bg-opacity-80">
           <h1 className="text-xl font-bold text-yellow-400">Kala Agalya Herbals</h1>
