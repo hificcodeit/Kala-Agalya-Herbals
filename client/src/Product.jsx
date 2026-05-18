@@ -447,7 +447,7 @@ export default function Product() {
                       {review.image && (
                         <div className="mt-6 rounded-2xl overflow-hidden border border-yellow-500/20 inline-block relative group">
                           <img 
-                            src={review.image.startsWith("data:image") || review.image.startsWith("http") || review.image.startsWith("/images/") ? review.image : `${BASE_URL.replace(/\/api$/, "")}${review.image.startsWith("/") ? review.image : \`/\${review.image}\`}`} 
+                            src={review.image.startsWith("data:image") || review.image.startsWith("http") || review.image.startsWith("/images/") ? review.image : `${BASE_URL.replace(/\/api$/, "")}${review.image.startsWith("/") ? review.image : `/${review.image}`}`} 
                             alt={`Review photo by ${review.name}`} 
                             className="w-40 h-40 object-cover transform group-hover:scale-110 transition-transform duration-500"
                           />
