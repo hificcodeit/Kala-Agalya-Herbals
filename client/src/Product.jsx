@@ -174,7 +174,7 @@ export default function Product() {
   return (
     <div className="min-h-screen bg-[#060502] text-gray-200 relative overflow-hidden font-sans">
       <Helmet>
-        <title>Shop Kala Agalya Naturopathy Hair Oil | Natural Growth</title>
+        <title>Shop Kala Agalya Naturopathy Herbal Products | Natural Wellness</title>
       </Helmet>
 
       {/* Global CSS for Animations */}
@@ -248,17 +248,17 @@ export default function Product() {
             <img src="/images/icons/logo.png" alt="Logo" className="h-16 w-auto" />
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight leading-tight">
-            Naturopathy <span className="text-shimmer block md:inline">Hair Oil</span>
+            Naturopathy <span className="text-shimmer block md:inline">Herbal Products</span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto font-light mb-10">
-            Revitalize your roots with our 100% organic, chemical-free herbal formula. 
-            Experience visible growth and strength.
+            Revitalize your wellness with our 100% organic, chemical-free herbal formulations. 
+            Experience the pure power of nature.
           </p>
           
           <div className="flex flex-wrap justify-center gap-4 text-sm font-medium">
-            <span className="px-5 py-2 rounded-full bg-lime-900/30 border border-lime-500/30 text-lime-300 shadow-[0_0_15px_rgba(132,204,22,0.1)]">🌿 18+ Rare Herbs</span>
-            <span className="px-5 py-2 rounded-full bg-yellow-900/30 border border-yellow-500/30 text-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.1)]">✨ Stops Hair Fall</span>
-            <span className="px-5 py-2 rounded-full bg-orange-900/30 border border-orange-500/30 text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.1)]">💪 Strengthens Roots</span>
+            <span className="px-5 py-2 rounded-full bg-lime-900/30 border border-lime-500/30 text-lime-300 shadow-[0_0_15px_rgba(132,204,22,0.1)]">🌿 100% Organic</span>
+            <span className="px-5 py-2 rounded-full bg-yellow-900/30 border border-yellow-500/30 text-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.1)]">✨ Pure & Natural</span>
+            <span className="px-5 py-2 rounded-full bg-orange-900/30 border border-orange-500/30 text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.1)]">💪 Holistic Wellness</span>
           </div>
         </div>
       </header>
