@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { API_URL, BASE_URL } from "./services/api";
 
 export default function Cart() {
   const [cart, setCart] = useState([]);
@@ -7,6 +8,36 @@ export default function Cart() {
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("cart")) || [];
     setCart(saved);
+
+    // Sync with backend to ensure price and image are up-to-date
+    fetch(`${API_URL}/products`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.products) {
+          const updatedCart = saved.map(item => {
+            const dbProduct = data.products.find(p => p.name === item.name);
+            if (dbProduct) {
+              const sizeIdx = dbProduct.sizes.findIndex(s => s.size === item.size);
+              if (sizeIdx !== -1) {
+                const dbSize = dbProduct.sizes[sizeIdx];
+                const newPrice = dbSize.offerPrice || dbSize.price;
+                
+                let newImg = dbProduct.images && (dbProduct.images[sizeIdx] || dbProduct.images[0]);
+                if (newImg && !newImg.startsWith("http") && !newImg.startsWith("data:") && !newImg.startsWith("/images/")) {
+                  newImg = `${BASE_URL.replace(/\/api$/, "")}${newImg.startsWith("/") ? newImg : `/${newImg}`}`;
+                }
+                
+                return { ...item, price: newPrice, img: newImg || item.img };
+              }
+            }
+            return item;
+          });
+          setCart(updatedCart);
+          localStorage.setItem("cart", JSON.stringify(updatedCart));
+          document.dispatchEvent(new Event("cartUpdated"));
+        }
+      })
+      .catch(err => console.error("Error syncing cart data:", err));
   }, []);
 
   const updateCart = (updated) => {
@@ -89,7 +120,7 @@ export default function Cart() {
                   <div className="flex-1 text-center sm:text-left">
                     <p className="font-bold text-xl text-white mb-1 group-hover:text-yellow-400 transition-colors uppercase tracking-tight">{item.name}</p>
                     <p className="text-gray-500 text-sm mb-2">Size: {item.size}</p>
-                    <p className="font-bold text-yellow-500 text-lg">₹ {item.price}</p>
+                    <p className="font-bold text-yellow-500 text-lg">₹ {item.price * item.quantity}</p>
                   </div>
 
                   {/* Quantity & Remove */}
