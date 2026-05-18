@@ -4,10 +4,37 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { API_URL, BASE_URL } from "./services/api";
 
+const staticReviews = [
+  {
+    _id: "static_1",
+    name: "Ananya S.",
+    rating: 5,
+    comment: "This hair oil is a miracle! I've been suffering from severe hair fall for months, but within just two weeks of using Kala Agalya, my hair fall has completely stopped. My roots feel stronger, and my hair is noticeably thicker. Highly recommended!",
+    image: "/images/Home 4.png",
+    createdAt: "2024-05-10T10:00:00.000Z"
+  },
+  {
+    _id: "static_2",
+    name: "Priya Menon",
+    rating: 5,
+    comment: "The cooling effect on the scalp is so relaxing. I use it twice a week, and not only has it cured my dandruff, but it has also given my hair a beautiful natural shine. It truly feels like an authentic ayurvedic remedy.",
+    image: "/images/home 2.png",
+    createdAt: "2024-04-22T14:30:00.000Z"
+  },
+  {
+    _id: "static_3",
+    name: "Lakshmi R.",
+    rating: 4,
+    comment: "I love the smell and texture. It's not too sticky compared to other herbal oils. I can already see baby hairs growing at my hairline. Will definitely purchase the 500ml bottle next time!",
+    image: "/images/Home 5.png",
+    createdAt: "2024-03-15T09:15:00.000Z"
+  }
+];
+
 export default function Product() {
   const [dbProduct, setDbProduct] = useState(null);
   const [dbProducts, setDbProducts] = useState([]);
-  const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState(staticReviews);
   const [loading, setLoading] = useState(true);
   const [reviewForm, setReviewForm] = useState({
     name: "",
@@ -45,7 +72,11 @@ export default function Product() {
   const fetchReviews = (productId) => {
     fetch(`${API_URL}/reviews/${productId}`)
       .then(res => res.json())
-      .then(data => setReviews(data))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setReviews([...staticReviews, ...data]);
+        }
+      })
       .catch(err => console.error("Error fetching reviews:", err));
   };
 
@@ -416,7 +447,7 @@ export default function Product() {
                       {review.image && (
                         <div className="mt-6 rounded-2xl overflow-hidden border border-yellow-500/20 inline-block relative group">
                           <img 
-                            src={review.image.startsWith("data:image") ? review.image : `${BASE_URL.replace(/\/api$/, "")}${review.image.startsWith("/") ? review.image : `/${review.image}`}`} 
+                            src={review.image.startsWith("data:image") || review.image.startsWith("http") || review.image.startsWith("/images/") ? review.image : `${BASE_URL.replace(/\/api$/, "")}${review.image.startsWith("/") ? review.image : \`/\${review.image}\`}`} 
                             alt={`Review photo by ${review.name}`} 
                             className="w-40 h-40 object-cover transform group-hover:scale-110 transition-transform duration-500"
                           />
