@@ -97,10 +97,6 @@ export default function Product() {
   );
 
   const addToCart = (product) => {
-    if (!product.stock) {
-      addToast("This size is currently Out of Stock!", "error");
-      return;
-    }
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
     const existing = cart.find(item => {
       if (item.id && product.id) return item.id === product.id;
@@ -126,10 +122,6 @@ export default function Product() {
   };
 
   const buyNow = (product) => {
-    if (!product.stock) {
-      addToast("This size is currently Out of Stock!", "error");
-      return;
-    }
     addToCart(product);
     window.location.href = "/cart";
   };
@@ -331,25 +323,21 @@ export default function Product() {
                   </div>
 
                   <div className="flex items-center justify-center mb-8">
-                     <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                        product.stock ? "bg-lime-900/20 text-lime-400 border-lime-500/30" : "bg-red-900/20 text-red-400 border-red-500/30"
-                     }`}>
-                       {product.stock ? "In Stock" : "Out of Stock"}
+                     <span className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border bg-lime-900/20 text-lime-400 border-lime-500/30">
+                       Available
                      </span>
                   </div>
 
                   <div className="space-y-4">
                     <button
                       onClick={() => addToCart(product)}
-                      disabled={!product.stock}
-                      className="w-full py-4 rounded-xl font-bold uppercase tracking-wide transition-all bg-[#1a170d] text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/10 hover:border-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full py-4 rounded-xl font-bold uppercase tracking-wide transition-all bg-[#1a170d] text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/10 hover:border-yellow-400"
                     >
                       Add to Cart
                     </button>
                     <button
                       onClick={() => buyNow(product)}
-                      disabled={!product.stock}
-                      className="w-full py-4 rounded-xl font-bold uppercase tracking-wide transition-all bg-gradient-to-r from-yellow-500 to-amber-600 text-black hover:from-yellow-400 hover:to-amber-500 shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full py-4 rounded-xl font-bold uppercase tracking-wide transition-all bg-gradient-to-r from-yellow-500 to-amber-600 text-black hover:from-yellow-400 hover:to-amber-500 shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)]"
                     >
                       Buy Now
                     </button>
