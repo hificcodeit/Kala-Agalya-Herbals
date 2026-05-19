@@ -101,11 +101,12 @@ export default function Product() {
       return;
     }
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
-    const existing = cart.find(item => item.size === product.ml);
+    const existing = cart.find(item => item.size === product.ml && item.name === product.name);
     if (existing) {
       existing.quantity += 1;
     } else {
       cart.push({
+        id: product.id,
         name: product.name,
         size: product.ml,
         price: product.price,
