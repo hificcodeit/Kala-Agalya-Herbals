@@ -28,7 +28,7 @@ export default function Cart() {
                 
                 let newImg = dbProduct.images && (dbProduct.images[sizeIdx] || dbProduct.images[0]);
                 if (newImg && !newImg.startsWith("http") && !newImg.startsWith("data:") && !newImg.startsWith("/images/")) {
-                  newImg = `${BASE_URL.replace(/\/api$/, "")}${newImg.startsWith("/") ? newImg : \`/\${newImg}\`}`;
+                  newImg = `${BASE_URL.replace(/\/api$/, "")}${newImg.startsWith("/") ? newImg : `/${newImg}`}`;
                 }
                 
                 return { ...item, price: newPrice, img: newImg || item.img };
