@@ -143,6 +143,42 @@ export default function Product() {
     window.location.href = "/cart";
   };
 
+  const addAllToCart = () => {
+    const cart = JSON.parse(localStorage.getItem("cart")) || [];
+    let addedCount = 0;
+    products.forEach(product => {
+      const existing = cart.find(item => {
+        if (item.id && product.id) return item.id === product.id;
+        return item.size === product.ml && item.name === product.name;
+      });
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.push({
+          id: product.id,
+          productId: product.productId,
+          name: product.name,
+          size: product.ml,
+          price: product.price,
+          quantity: 1
+        });
+        addedCount++;
+      }
+    });
+    try {
+      localStorage.setItem("cart", JSON.stringify(cart));
+      document.dispatchEvent(new Event("cartUpdated"));
+      addToast(`${addedCount > 0 ? addedCount + " new products" : "All products"} added to cart!`, "success");
+    } catch (e) {
+      addToast("Cart storage error. Please refresh and try again.", "error");
+    }
+  };
+
+  const buyAllNow = () => {
+    addAllToCart();
+    window.location.href = "/cart";
+  };
+
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!dbProduct) {
@@ -295,7 +331,30 @@ export default function Product() {
             Products are currently being restocked. Please check back later.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <>
+            {/* Bulk Action Banner */}
+            <div className="mb-10 p-6 rounded-2xl border border-yellow-500/20 bg-gradient-to-r from-yellow-950/40 via-amber-950/30 to-yellow-950/40 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <p className="text-white font-bold text-lg">🛒 Want everything?</p>
+                <p className="text-gray-400 text-sm">Add all {products.length} products to your cart in one click</p>
+              </div>
+              <div className="flex gap-3 w-full sm:w-auto">
+                <button
+                  onClick={addAllToCart}
+                  className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-bold uppercase tracking-wide text-sm transition-all bg-[#1a170d] text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/10 hover:border-yellow-400 whitespace-nowrap"
+                >
+                  + Add All to Cart
+                </button>
+                <button
+                  onClick={buyAllNow}
+                  className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-bold uppercase tracking-wide text-sm transition-all bg-gradient-to-r from-yellow-500 to-amber-600 text-black hover:from-yellow-400 hover:to-amber-500 shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] whitespace-nowrap"
+                >
+                  ⚡ Buy All Now
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {products.map((product, index) => (
               <div 
                 key={product.id}
@@ -363,6 +422,7 @@ export default function Product() {
               </div>
             ))}
           </div>
+          </>
         )}
       </section>
 
