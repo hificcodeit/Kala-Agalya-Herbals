@@ -108,6 +108,7 @@ export default function Product() {
   );
 
   const addToCart = (product) => {
+    // Load cart without images (localStorage is image-free by design)
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
     const existing = cart.find(item => {
       if (item.id && product.id) return item.id === product.id;
@@ -123,8 +124,9 @@ export default function Product() {
         name: product.name,
         size: product.ml,
         price: product.price,
-        quantity: 1,
-        img: product.cartImg  // lightweight URL, never base64
+        quantity: 1
+        // Note: img is intentionally NOT stored here to avoid localStorage quota errors.
+        // Cart.jsx fetches and injects images from the backend on load.
       });
     }
     try {
@@ -132,15 +134,7 @@ export default function Product() {
       document.dispatchEvent(new Event("cartUpdated"));
       addToast("Product added to cart successfully!", "success");
     } catch (e) {
-      // If quota still exceeded, save without images as fallback
-      const lightCart = cart.map(({ img, ...rest }) => rest);
-      try {
-        localStorage.setItem("cart", JSON.stringify(lightCart));
-        document.dispatchEvent(new Event("cartUpdated"));
-        addToast("Product added to cart successfully!", "success");
-      } catch (e2) {
-        addToast("Cart storage is full. Please clear some items.", "error");
-      }
+      addToast("Cart storage error. Please refresh and try again.", "error");
     }
   };
 

@@ -6,15 +6,21 @@ export default function Cart() {
   const [cart, setCart] = useState([]);
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("cart")) || [];
-    setCart(saved);
+    // Strip any base64 images from old localStorage cart data immediately
+    let saved = JSON.parse(localStorage.getItem("cart")) || [];
+    const stripped = saved.map(({ img, ...rest }) => rest);
+    try { localStorage.setItem("cart", JSON.stringify(stripped)); } catch(e) {
+      localStorage.removeItem("cart");
+      saved = [];
+    }
+    setCart(stripped);
 
-    // Sync with backend to ensure price and image are up-to-date
+    // Sync with backend to get up-to-date prices and images (images stay in state only)
     fetch(`${API_URL}/products`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.products) {
-          const updatedCart = saved.map(item => {
+          const updatedCart = stripped.map(item => {
             const dbProduct = data.products.find(p => {
               if (item.productId) return p._id === item.productId;
               if (item.id) return item.id.startsWith(p._id);
@@ -25,28 +31,44 @@ export default function Cart() {
               if (sizeIdx !== -1) {
                 const dbSize = dbProduct.sizes[sizeIdx];
                 const newPrice = dbSize.offerPrice || dbSize.price;
-                
-                let newImg = dbProduct.images && (dbProduct.images[sizeIdx] || dbProduct.images[0]);
-                if (newImg && !newImg.startsWith("http") && !newImg.startsWith("data:") && !newImg.startsWith("/images/")) {
-                  newImg = `${BASE_URL.replace(/\/api$/, "")}${newImg.startsWith("/") ? newImg : `/${newImg}`}`;
+
+                // Build a safe (non-base64) image URL for display in state
+                let rawImg = dbProduct.images && (dbProduct.images[sizeIdx] || dbProduct.images[0]);
+                let displayImg = "/images/icons/logo.png";
+                if (rawImg) {
+                  if (rawImg.startsWith("data:image")) {
+                    displayImg = "/images/icons/logo.png"; // never put base64 in storage
+                  } else if (rawImg.startsWith("http") || rawImg.startsWith("/images/")) {
+                    displayImg = rawImg;
+                  } else {
+                    displayImg = `${BASE_URL.replace(/\/api$/, "")}${rawImg.startsWith("/") ? rawImg : `/${rawImg}`}`;
+                  }
                 }
-                
-                return { ...item, price: newPrice, img: newImg || item.img };
+
+                return { ...item, price: newPrice, img: displayImg };
               }
             }
             return item;
           });
-          setCart(updatedCart);
-          localStorage.setItem("cart", JSON.stringify(updatedCart));
+
+          // Save to localStorage WITHOUT images to avoid QuotaExceededError
+          const lightCart = updatedCart.map(({ img, ...rest }) => rest);
+          try { localStorage.setItem("cart", JSON.stringify(lightCart)); } catch(e) { /* ignore */ }
           document.dispatchEvent(new Event("cartUpdated"));
+
+          // Keep full data (with img) in React state for display
+          setCart(updatedCart);
         }
       })
       .catch(err => console.error("Error syncing cart data:", err));
   }, []);
 
+
   const updateCart = (updated) => {
     setCart(updated);
-    localStorage.setItem("cart", JSON.stringify(updated));
+    // Strip images from localStorage to prevent QuotaExceededError
+    const lightCart = updated.map(({ img, ...rest }) => rest);
+    try { localStorage.setItem("cart", JSON.stringify(lightCart)); } catch(e) { /* ignore */ }
     document.dispatchEvent(new Event("cartUpdated"));
   };
 
