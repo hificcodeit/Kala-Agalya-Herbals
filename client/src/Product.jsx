@@ -91,7 +91,7 @@ export default function Product() {
        ml: s.size,
        price: s.offerPrice || s.price,
        originalPrice: s.offerPrice ? s.price : null,
-       stock: s.stock > 0,
+       stock: true,
        savings: (s.offerPrice && s.offerPrice < s.price) ? `Save ₹${s.price - s.offerPrice}` : null
     }))
   );
