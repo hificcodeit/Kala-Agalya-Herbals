@@ -15,7 +15,11 @@ export default function Cart() {
       .then(data => {
         if (data.success && data.products) {
           const updatedCart = saved.map(item => {
-            const dbProduct = data.products.find(p => p.name === item.name);
+            const dbProduct = data.products.find(p => {
+              if (item.productId) return p._id === item.productId;
+              if (item.id) return item.id.startsWith(p._id);
+              return p.name === item.name;
+            });
             if (dbProduct) {
               const sizeIdx = dbProduct.sizes.findIndex(s => s.size === item.size);
               if (sizeIdx !== -1) {
@@ -24,7 +28,7 @@ export default function Cart() {
                 
                 let newImg = dbProduct.images && (dbProduct.images[sizeIdx] || dbProduct.images[0]);
                 if (newImg && !newImg.startsWith("http") && !newImg.startsWith("data:") && !newImg.startsWith("/images/")) {
-                  newImg = `${BASE_URL.replace(/\/api$/, "")}${newImg.startsWith("/") ? newImg : `/${newImg}`}`;
+                  newImg = `${BASE_URL.replace(/\/api$/, "")}${newImg.startsWith("/") ? newImg : \`/\${newImg}\`}`;
                 }
                 
                 return { ...item, price: newPrice, img: newImg || item.img };

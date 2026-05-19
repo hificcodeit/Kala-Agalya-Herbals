@@ -84,6 +84,7 @@ export default function Product() {
     prod.sizes.map((s, idx) => ({
        ...s,
        id: `${prod._id}-${s.size}`,
+       productId: prod._id,
        name: prod.name,
        description: prod.description,
        img: getImg(prod.images, idx),
@@ -101,12 +102,17 @@ export default function Product() {
       return;
     }
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
-    const existing = cart.find(item => item.size === product.ml && item.name === product.name);
+    const existing = cart.find(item => {
+      if (item.id && product.id) return item.id === product.id;
+      return item.size === product.ml && item.name === product.name;
+    });
+
     if (existing) {
       existing.quantity += 1;
     } else {
       cart.push({
         id: product.id,
+        productId: product.productId,
         name: product.name,
         size: product.ml,
         price: product.price,
