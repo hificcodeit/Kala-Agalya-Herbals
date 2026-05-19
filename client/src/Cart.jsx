@@ -32,12 +32,12 @@ export default function Cart() {
                 const dbSize = dbProduct.sizes[sizeIdx];
                 const newPrice = dbSize.offerPrice || dbSize.price;
 
-                // Build a safe (non-base64) image URL for display in state
+                // Build image URL for display in React state only (base64 OK here — stripped before localStorage write)
                 let rawImg = dbProduct.images && (dbProduct.images[sizeIdx] || dbProduct.images[0]);
                 let displayImg = "/images/icons/logo.png";
                 if (rawImg) {
                   if (rawImg.startsWith("data:image")) {
-                    displayImg = "/images/icons/logo.png"; // never put base64 in storage
+                    displayImg = rawImg; // base64 is fine in React state; stripped from localStorage below
                   } else if (rawImg.startsWith("http") || rawImg.startsWith("/images/")) {
                     displayImg = rawImg;
                   } else {
