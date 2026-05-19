@@ -54,6 +54,16 @@ export default function Product() {
     return `${BASE_URL.replace(/\/api$/, "")}${img.startsWith("/") ? img : `/${img}`}`;
   };
 
+  // Returns a lightweight image reference safe for localStorage (never base64).
+  const getSafeCartImg = (images, sizeIdx) => {
+    if (!images || images.length === 0) return "/images/icons/logo.png";
+    const img = images[sizeIdx] || images[0];
+    if (img.startsWith("data:image")) return "/images/icons/logo.png"; // skip base64
+    if (img.startsWith("http")) return img;
+    if (img.startsWith("/images/")) return img;
+    return `${BASE_URL.replace(/\/api$/, "")}${img.startsWith("/") ? img : `/${img}`}`;
+  };
+
   useEffect(() => {
     fetch(`${API_URL}/products`)
       .then(res => res.json())
@@ -88,6 +98,7 @@ export default function Product() {
        name: prod.name,
        description: prod.description,
        img: getImg(prod.images, idx),
+       cartImg: getSafeCartImg(prod.images, idx),
        ml: s.size,
        price: s.offerPrice || s.price,
        originalPrice: s.offerPrice ? s.price : null,
@@ -113,12 +124,24 @@ export default function Product() {
         size: product.ml,
         price: product.price,
         quantity: 1,
-        img: product.img
+        img: product.cartImg  // lightweight URL, never base64
       });
     }
-    localStorage.setItem("cart", JSON.stringify(cart));
-    document.dispatchEvent(new Event("cartUpdated"));
-    addToast("Product added to cart successfully!", "success");
+    try {
+      localStorage.setItem("cart", JSON.stringify(cart));
+      document.dispatchEvent(new Event("cartUpdated"));
+      addToast("Product added to cart successfully!", "success");
+    } catch (e) {
+      // If quota still exceeded, save without images as fallback
+      const lightCart = cart.map(({ img, ...rest }) => rest);
+      try {
+        localStorage.setItem("cart", JSON.stringify(lightCart));
+        document.dispatchEvent(new Event("cartUpdated"));
+        addToast("Product added to cart successfully!", "success");
+      } catch (e2) {
+        addToast("Cart storage is full. Please clear some items.", "error");
+      }
+    }
   };
 
   const buyNow = (product) => {
