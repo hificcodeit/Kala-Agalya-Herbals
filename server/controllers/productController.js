@@ -28,7 +28,7 @@ exports.createProduct = async (req, res) => {
   try {
     console.log("Create Product Body:", req.body);
     console.log("Create Product Files:", req.files);
-    const { name, description, sizes: sizesStr, category, isActive } = req.body;
+    const { name, description, sizes: sizesStr, category, isActive, gstPercentage } = req.body;
     let images = [];
 
     if (req.files && req.files.length > 0) {
@@ -44,9 +44,11 @@ exports.createProduct = async (req, res) => {
     // Clean sizes data
     if (Array.isArray(sizes)) {
       sizes = sizes.map(s => {
+        const mrp = (s.mrp === "" || s.mrp === null || s.mrp === undefined) ? null : Number(s.mrp);
         const offerPrice = (s.offerPrice === "" || s.offerPrice === null || s.offerPrice === undefined) ? null : Number(s.offerPrice);
         return {
           ...s,
+          mrp: isNaN(mrp) ? null : mrp,
           offerPrice: isNaN(offerPrice) ? null : offerPrice
         };
       });
@@ -58,6 +60,7 @@ exports.createProduct = async (req, res) => {
       sizes,
       images,
       category,
+      gstPercentage: gstPercentage !== undefined ? Number(gstPercentage) : 0,
       isActive: isActive === "true" || isActive === true
     });
 
@@ -77,8 +80,12 @@ exports.createProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     console.log("Update Product Body:", req.body);
-    const { name, description, sizes: sizesStr, category, isActive } = req.body;
+    const { name, description, sizes: sizesStr, category, isActive, gstPercentage } = req.body;
     const updateData = { name, description, category, isActive: isActive === "true" || isActive === true, updatedAt: Date.now() };
+
+    if (gstPercentage !== undefined) {
+      updateData.gstPercentage = Number(gstPercentage);
+    }
 
     if (req.files && req.files.length > 0) {
       updateData.images = req.files.map(file => {
@@ -91,9 +98,11 @@ exports.updateProduct = async (req, res) => {
       let sizes = typeof sizesStr === "string" ? JSON.parse(sizesStr) : sizesStr;
       if (Array.isArray(sizes)) {
         updateData.sizes = sizes.map(s => {
+          const mrp = (s.mrp === "" || s.mrp === null || s.mrp === undefined) ? null : Number(s.mrp);
           const offerPrice = (s.offerPrice === "" || s.offerPrice === null || s.offerPrice === undefined) ? null : Number(s.offerPrice);
           return {
             ...s,
+            mrp: isNaN(mrp) ? null : mrp,
             offerPrice: isNaN(offerPrice) ? null : offerPrice
           };
         });

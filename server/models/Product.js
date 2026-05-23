@@ -16,6 +16,10 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true
       },
+      mrp: {
+        type: Number,
+        default: null
+      },
       price: {
         type: Number,
         required: true
@@ -30,6 +34,10 @@ const productSchema = new mongoose.Schema({
       }
     }
   ],
+  gstPercentage: {
+    type: Number,
+    default: 0
+  },
   images: {
     type: [String],
     default: []

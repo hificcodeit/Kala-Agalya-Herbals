@@ -12,10 +12,11 @@ export default function AdminProducts() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    gstPercentage: 0,
     sizes: [
-      { size: "100ml", price: 0, stock: 0 },
-      { size: "200ml", price: 0, stock: 0 },
-      { size: "500ml", price: 0, stock: 0 },
+      { size: "100ml", mrp: 0, price: 0, stock: 0 },
+      { size: "200ml", mrp: 0, price: 0, stock: 0 },
+      { size: "500ml", mrp: 0, price: 0, stock: 0 },
     ],
     images: [],      // Array of File objects
     imageUrls: [],   // Array of display URLs
@@ -56,6 +57,7 @@ export default function AdminProducts() {
     submitData.append("name", formData.name);
     submitData.append("description", formData.description);
     submitData.append("sizes", JSON.stringify(formData.sizes));
+    submitData.append("gstPercentage", formData.gstPercentage);
     submitData.append("isActive", formData.isActive);
 
     if (formData.images && formData.images.length > 0) {
@@ -122,6 +124,7 @@ export default function AdminProducts() {
     setFormData({
       name: product.name,
       description: product.description,
+      gstPercentage: product.gstPercentage || 0,
       sizes: product.sizes,
       images: [],
       imageUrls: product.images || [],
@@ -135,10 +138,11 @@ export default function AdminProducts() {
     setFormData({
       name: "",
       description: "",
+      gstPercentage: 0,
       sizes: [
-        { size: "100ml", price: 0, stock: 0 },
-        { size: "200ml", price: 0, stock: 0 },
-        { size: "500ml", price: 0, stock: 0 },
+        { size: "100ml", mrp: 0, price: 0, stock: 0 },
+        { size: "200ml", mrp: 0, price: 0, stock: 0 },
+        { size: "500ml", mrp: 0, price: 0, stock: 0 },
       ],
       images: [],
       imageUrls: [],
@@ -155,7 +159,7 @@ export default function AdminProducts() {
   const addSize = () => {
     setFormData({
       ...formData,
-      sizes: [...formData.sizes, { size: "", price: 0, offerPrice: null, stock: 0 }]
+      sizes: [...formData.sizes, { size: "", mrp: 0, price: 0, offerPrice: null, stock: 0 }]
     });
   };
 
@@ -229,13 +233,24 @@ export default function AdminProducts() {
                   <div key={idx} className="flex justify-between items-center text-sm">
                     <span className="text-gray-300 font-medium bg-white/5 px-2 py-0.5 rounded text-xs">{sizeInfo.size}</span>
                     <div className="flex gap-4 items-center">
-                      <span className="text-yellow-400 font-bold font-mono">₹{sizeInfo.price}</span>
+                      <div className="flex flex-col items-end">
+                        {sizeInfo.mrp && sizeInfo.mrp > sizeInfo.price && (
+                          <span className="text-gray-500 line-through text-[10px] font-mono">₹{sizeInfo.mrp}</span>
+                        )}
+                        <span className="text-yellow-400 font-bold font-mono">₹{sizeInfo.price}</span>
+                      </div>
                       <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${sizeInfo.stock < 10 ? 'bg-red-900/50 text-red-400' : 'bg-yellow-900/20 text-yellow-500'}`}>
                         {sizeInfo.stock} left
                       </span>
                     </div>
                   </div>
                 ))}
+                {product.gstPercentage > 0 && (
+                  <div className="flex justify-between items-center text-[10px] pt-2 border-t border-white/5">
+                    <span className="text-gray-500 uppercase font-bold">GST</span>
+                    <span className="text-amber-400 font-bold">{product.gstPercentage}%</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 pt-2 border-t border-white/5">
@@ -319,6 +334,37 @@ export default function AdminProducts() {
                   placeholder="Describe the benefits..."
                   required
                 />
+              </div>
+
+              {/* GST Percentage */}
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                <label className="block text-[10px] font-bold text-yellow-500 uppercase tracking-widest mb-3">GST Percentage (%)</label>
+                <div className="flex gap-3 flex-wrap">
+                  {[0, 5, 12, 18, 28].map(gst => (
+                    <button
+                      key={gst}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, gstPercentage: gst })}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${
+                        formData.gstPercentage === gst
+                          ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.4)]'
+                          : 'bg-black/30 text-gray-400 border-yellow-900/30 hover:border-yellow-500/50 hover:text-yellow-400'
+                      }`}
+                    >
+                      {gst}%
+                    </button>
+                  ))}
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.gstPercentage}
+                    onChange={(e) => setFormData({ ...formData, gstPercentage: Number(e.target.value) })}
+                    className="w-20 px-3 py-2 bg-[#0d0b03] border border-yellow-900/40 rounded-lg text-white text-xs outline-none focus:border-yellow-500 text-center"
+                    placeholder="Custom"
+                  />
+                </div>
+                <p className="text-[9px] text-gray-600 mt-2">Click a preset or type a custom GST %</p>
               </div>
 
               <div>
@@ -406,25 +452,26 @@ export default function AdminProducts() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] text-gray-500 uppercase font-black">Price (₹)</label>
+                          <label className="text-[9px] text-gray-500 uppercase font-black">MRP — Original Price (₹)</label>
                           <input
                             type="number"
-                            value={sizeInfo.price}
-                            onChange={(e) => updateSize(index, "price", e.target.value)}
+                            value={sizeInfo.mrp || ""}
+                            onChange={(e) => updateSize(index, "mrp", e.target.value)}
                             className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
-                            required
+                            placeholder="e.g. 499"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[9px] text-yellow-600/80 uppercase font-black">Offer Price (Optional)</label>
+                          <label className="text-[9px] text-yellow-400 uppercase font-black">Selling / Discount Price (₹)</label>
                           <input
                             type="number"
-                            value={sizeInfo.offerPrice || ""}
-                            onChange={(e) => updateSize(index, "offerPrice", e.target.value)}
-                            className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-900/30 rounded-lg text-white text-xs outline-none focus:border-yellow-500"
+                            value={sizeInfo.price}
+                            onChange={(e) => updateSize(index, "price", e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0d0b03] border border-yellow-500/40 rounded-lg text-yellow-400 text-xs outline-none focus:border-yellow-500 font-bold"
+                            required
                           />
                         </div>
                         <div className="space-y-1">

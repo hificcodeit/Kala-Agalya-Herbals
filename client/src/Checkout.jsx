@@ -1,12 +1,63 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { createOrder } from "./services/api";
+
+// Indian states list
+const INDIAN_STATES = [
+  "Andaman and Nicobar Islands",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chandigarh",
+  "Chhattisgarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jammu and Kashmir",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Ladakh",
+  "Lakshadweep",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Puducherry",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+];
+
+// Shipping rate logic
+const SOUTH_INDIA_75 = ["Andhra Pradesh", "Telangana", "Kerala", "Karnataka"];
+const TAMIL_NADU = "Tamil Nadu";
+
+function getShippingInfo(state) {
+  if (!state) return { amount: 0, label: "Select a state to see shipping", free: false, pending: true };
+  if (state === TAMIL_NADU) return { amount: 0, mrp: 55, label: "FREE Shipping", free: true, pending: false };
+  if (SOUTH_INDIA_75.includes(state)) return { amount: 75, label: "₹75", free: false, pending: false };
+  return { amount: 165, label: "₹165", free: false, pending: false };
+}
 
 export default function Checkout() {
   const cart = JSON.parse(localStorage.getItem("cart")) || [];
   const navigate = useNavigate();
 
-  const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
   const [form, setForm] = useState({
     name: localStorage.getItem("userName") || "",
@@ -17,6 +68,9 @@ export default function Checkout() {
     state: "",
     pincode: ""
   });
+
+  const shipping = useMemo(() => getShippingInfo(form.state), [form.state]);
+  const grandTotal = subtotal + shipping.amount;
 
   const handleChange = e =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -41,13 +95,13 @@ export default function Checkout() {
         price: item.price,
         quantity: item.quantity
       })),
-      totalAmount: total
+      shippingAmount: shipping.amount,
+      totalAmount: grandTotal
     };
 
     try {
       const data = await createOrder(orderData);
       if (data.success && data.order && data.order._id) {
-        // Store order ID for payment step
         localStorage.setItem("lastOrderId", data.order._id);
         navigate("/payment");
       } else {
@@ -148,7 +202,7 @@ export default function Checkout() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">City</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">City / District</label>
                     <input
                       required
                       name="city"
@@ -158,17 +212,40 @@ export default function Checkout() {
                       placeholder="City"
                     />
                   </div>
+
+                  {/* State Dropdown */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase ml-1">State</label>
-                    <input
-                      required
-                      name="state"
-                      value={form.state}
-                      onChange={handleChange}
-                      className="w-full bg-[#0d0b03] border border-yellow-500/10 text-white p-4 rounded-xl focus:outline-none focus:ring-1 focus:ring-yellow-500/50 focus:border-yellow-500 transition-all placeholder:text-gray-700"
-                      placeholder="State"
-                    />
+                    <div className="relative">
+                      <select
+                        required
+                        name="state"
+                        value={form.state}
+                        onChange={handleChange}
+                        className="w-full bg-[#0d0b03] border border-yellow-500/10 text-white p-4 rounded-xl focus:outline-none focus:ring-1 focus:ring-yellow-500/50 focus:border-yellow-500 transition-all appearance-none cursor-pointer pr-10"
+                      >
+                        <option value="" disabled className="text-gray-600">Select State</option>
+                        {INDIAN_STATES.map(s => (
+                          <option key={s} value={s} className="bg-[#0d0b03] text-white">{s}</option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                        <svg className="w-4 h-4 text-yellow-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                    {/* Shipping preview badge under state */}
+                    {form.state && (
+                      <div className={`mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] font-bold uppercase ${shipping.free ? 'text-green-400' : 'text-amber-400'}`}>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 11a2 2 0 002 2h8a2 2 0 002-2L19 8" />
+                        </svg>
+                        {shipping.free ? "Free Delivery!" : `Shipping: ${shipping.label}`}
+                      </div>
+                    )}
                   </div>
+
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase ml-1">Pincode</label>
                     <input
@@ -187,12 +264,12 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* Checkout Summary */}
+          {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-[#15120a] p-8 rounded-3xl border border-yellow-500/10 shadow-2xl sticky top-24">
               <h3 className="text-2xl font-bold text-white mb-8 border-b border-yellow-500/10 pb-4">Order Summary</h3>
 
-              <div className="space-y-4 mb-8 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-4 mb-6 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                 {cart.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-start text-sm">
                     <div className="flex-1 pr-4">
@@ -204,10 +281,53 @@ export default function Checkout() {
                 ))}
               </div>
 
-              <div className="flex justify-between items-center mb-10 pt-4 border-t border-yellow-500/10">
-                <span className="text-xl font-bold text-white">Total</span>
-                <span className="text-3xl font-bold text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]">₹ {total}</span>
+              {/* Subtotal */}
+              <div className="flex justify-between items-center py-3 border-t border-yellow-500/10">
+                <span className="text-sm text-gray-400">Subtotal</span>
+                <span className="text-sm font-bold text-gray-200">₹{subtotal}</span>
               </div>
+
+              {/* Shipping Row */}
+              <div className="flex justify-between items-center py-3 border-b border-yellow-500/10">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 11a2 2 0 002 2h8a2 2 0 002-2L19 8" />
+                  </svg>
+                  <span className="text-sm text-gray-400">Shipping</span>
+                </div>
+                {shipping.pending ? (
+                  <span className="text-xs text-gray-600 italic">Select state</span>
+                ) : shipping.free ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 line-through">₹{shipping.mrp}</span>
+                    <span className="text-xs font-extrabold bg-green-500/20 text-green-400 border border-green-500/40 px-2 py-0.5 rounded-full tracking-wide">FREE</span>
+                  </div>
+                ) : (
+                  <span className="text-sm font-bold text-amber-400">{shipping.label}</span>
+                )}
+              </div>
+
+              {/* Grand Total */}
+              <div className="flex justify-between items-center mt-4 mb-8">
+                <span className="text-xl font-bold text-white">Total</span>
+                <span className="text-3xl font-bold text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]">₹ {grandTotal}</span>
+              </div>
+
+              {/* Shipping note */}
+              {form.state && (
+                <div className={`mb-6 px-4 py-3 rounded-xl text-xs font-medium ${
+                  shipping.free
+                    ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                    : "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                }`}>
+                  {shipping.free
+                    ? `🎉 Lucky! Free delivery to Tamil Nadu (saves ₹${shipping.mrp})`
+                    : form.state && SOUTH_INDIA_75.includes(form.state)
+                      ? `📦 Standard delivery to ${form.state}: ₹75`
+                      : `📦 Delivery to ${form.state}: ₹165`
+                  }
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -233,10 +353,8 @@ export default function Checkout() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #eab30866; }
         .bg-size-200 { background-size: 200% auto; }
         .hover\\:bg-pos-100:hover { background-position: right center; }
+        select option { background-color: #0d0b03; color: white; }
       `}</style>
     </div>
   );
 }
-
-
-
