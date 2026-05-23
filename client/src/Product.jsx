@@ -90,21 +90,27 @@ export default function Product() {
       .catch(err => console.error("Error fetching reviews:", err));
   };
 
-  const products = dbProducts.filter(p => p.isActive).flatMap(prod => 
-    prod.sizes.map((s, idx) => ({
-       ...s,
-       id: `${prod._id}-${s.size}`,
-       productId: prod._id,
-       name: prod.name,
-       description: prod.description,
-       img: getImg(prod.images, idx),
-       cartImg: getSafeCartImg(prod.images, idx),
-       ml: s.size,
-       price: s.offerPrice || s.price,
-       originalPrice: s.offerPrice ? s.price : null,
-       stock: true,
-       savings: (s.offerPrice && s.offerPrice < s.price) ? `Save ₹${s.price - s.offerPrice}` : null
-    }))
+  const products = dbProducts.filter(p => p.isActive).flatMap(prod =>
+    prod.sizes.map((s, idx) => {
+      const sellingPrice = s.price;
+      const mrpPrice = (s.mrp && s.mrp > s.price) ? s.mrp : null;
+      const discountPct = mrpPrice ? Math.round(((mrpPrice - sellingPrice) / mrpPrice) * 100) : null;
+      return {
+        ...s,
+        id: `${prod._id}-${s.size}`,
+        productId: prod._id,
+        name: prod.name,
+        description: prod.description,
+        img: getImg(prod.images, idx),
+        cartImg: getSafeCartImg(prod.images, idx),
+        ml: s.size,
+        price: sellingPrice,
+        mrp: mrpPrice,
+        discountPct,
+        stock: true,
+        savings: discountPct ? `${discountPct}% OFF` : null
+      };
+    })
   );
 
   const addToCart = (product) => {
@@ -334,11 +340,23 @@ export default function Product() {
                     <p className="text-gray-400 text-sm">{product.description}</p>
                   </div>
 
-                  <div className="flex justify-center items-center gap-4 mb-8">
-                    {product.originalPrice && (
-                      <span className="text-xl text-gray-500 line-through decoration-red-500/50">₹{product.originalPrice}</span>
+                  <div className="flex flex-col items-center gap-1 mb-8">
+                    {product.mrp && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg text-gray-500 line-through decoration-red-500/70 font-medium">MRP ₹{product.mrp}</span>
+                        {product.discountPct && (
+                          <span className="text-xs font-extrabold bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">
+                            {product.discountPct}% OFF
+                          </span>
+                        )}
+                      </div>
                     )}
                     <span className="text-5xl font-extrabold text-shimmer">₹{product.price}</span>
+                    {product.mrp && (
+                      <span className="text-xs text-green-400 font-semibold">
+                        You save ₹{product.mrp - product.price}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-center mb-8">
