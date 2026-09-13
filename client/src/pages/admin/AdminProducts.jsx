@@ -3,10 +3,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../components/Alert";
 import AdminLayout from "./AdminLayout";
+import { compressImageFile } from "../../utils/imageCompressor";
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({
@@ -53,21 +55,30 @@ export default function AdminProducts() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("adminToken");
-
-    const submitData = new FormData();
-    submitData.append("name", formData.name);
-    submitData.append("description", formData.description);
-    submitData.append("sizes", JSON.stringify(formData.sizes));
-    submitData.append("gstPercentage", formData.gstPercentage);
-    submitData.append("isActive", formData.isActive);
-
-    if (formData.images && formData.images.length > 0) {
-      formData.images.forEach((file) => {
-        submitData.append("images", file);
-      });
+    if (!token) {
+      addToast("Session expired, please login again", "error");
+      navigate("/admin/login");
+      return;
     }
 
+    setIsSubmitting(true);
     try {
+      const submitData = new FormData();
+      submitData.append("name", formData.name);
+      submitData.append("description", formData.description);
+      submitData.append("sizes", JSON.stringify(formData.sizes));
+      submitData.append("gstPercentage", formData.gstPercentage);
+      submitData.append("isActive", formData.isActive);
+
+      if (formData.images && formData.images.length > 0) {
+        const compressedImages = await Promise.all(
+          formData.images.map((file) => compressImageFile(file, 1200, 1200, 0.8))
+        );
+        compressedImages.forEach((file) => {
+          submitData.append("images", file);
+        });
+      }
+
       const url = editingProduct
         ? `${API_URL}/products/${editingProduct._id}`
         : `${API_URL}/products`;
@@ -83,7 +94,7 @@ export default function AdminProducts() {
       const data = await response.json();
       if (data.success) {
         addToast(
-          editingProduct ? "Product updated successfully" : "Product created successfully",
+          editingProduct ? "Product updated successfully ✨" : "Product created successfully 🚀",
           "success"
         );
         setShowModal(false);
@@ -94,7 +105,9 @@ export default function AdminProducts() {
       }
     } catch (error) {
       console.error("Error saving product:", error);
-      addToast("Failed to save product", "error");
+      addToast(error.message || "Failed to save product", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -521,9 +534,17 @@ export default function AdminProducts() {
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-bold hover:from-yellow-400 hover:to-amber-500 transition-all text-xs uppercase tracking-wider shadow-gold"
+                      disabled={isSubmitting}
+                      className="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-bold hover:from-yellow-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs uppercase tracking-wider shadow-gold flex items-center justify-center gap-2"
                     >
-                      {editingProduct ? "Save Changes" : "Create Product"}
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        editingProduct ? "Save Changes" : "Create Product"
+                      )}
                     </button>
                   </div>
                 </form>

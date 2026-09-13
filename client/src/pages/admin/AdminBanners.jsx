@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import { useToast } from "../../components/Alert";
 import { API_URL, BASE_URL } from "../../services/api";
+import { compressImageFile } from "../../utils/imageCompressor";
 
 export default function AdminBanners() {
   const [banners, setBanners] = useState([]);
@@ -89,18 +90,29 @@ export default function AdminBanners() {
       return;
     }
 
-    setIsSubmittingBanner(true);
     const token = localStorage.getItem("adminToken");
-    const fd = new FormData();
-    fd.append("title", bannerFormData.title);
-    fd.append("subtitle", bannerFormData.subtitle);
-    fd.append("linkUrl", bannerFormData.linkUrl);
+    if (!token) {
+      addToast("Session expired, please login again", "error");
+      navigate("/admin/login");
+      return;
+    }
 
-    bannerFiles.forEach((file) => {
-      fd.append("images", file);
-    });
-
+    setIsSubmittingBanner(true);
     try {
+      // Compress all banner images concurrently (max 1920x1080, WebP 80%)
+      const compressedFiles = await Promise.all(
+        bannerFiles.map((file) => compressImageFile(file, 1920, 1080, 0.8))
+      );
+
+      const fd = new FormData();
+      fd.append("title", bannerFormData.title);
+      fd.append("subtitle", bannerFormData.subtitle);
+      fd.append("linkUrl", bannerFormData.linkUrl);
+
+      compressedFiles.forEach((file) => {
+        fd.append("images", file);
+      });
+
       const res = await fetch(`${API_URL}/banners`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -119,7 +131,7 @@ export default function AdminBanners() {
       }
     } catch (err) {
       console.error("Banner upload error:", err);
-      addToast("Failed to upload offer banner(s)", "error");
+      addToast(err.message || "Failed to upload offer banner(s)", "error");
     } finally {
       setIsSubmittingBanner(false);
     }
