@@ -153,18 +153,33 @@ exports.getSalesChartData = async (req, res) => {
     let groupBy;
     if (period === 'monthly') {
       groupBy = {
-        year: { $year: "$createdAt" },
-        month: { $month: "$createdAt" }
+        year: { $year: { date: "$createdAt", timezone: "+05:30" } },
+        month: { $month: { date: "$createdAt", timezone: "+05:30" } }
       };
     } else {
       groupBy = {
-        year: { $year: "$createdAt" },
-        month: { $month: "$createdAt" },
-        day: { $dayOfMonth: "$createdAt" }
+        year: { $year: { date: "$createdAt", timezone: "+05:30" } },
+        month: { $month: { date: "$createdAt", timezone: "+05:30" } },
+        day: { $dayOfMonth: { date: "$createdAt", timezone: "+05:30" } }
       };
     }
+
+    const sortDesc = period === 'monthly'
+      ? { "_id.year": -1, "_id.month": -1 }
+      : { "_id.year": -1, "_id.month": -1, "_id.day": -1 };
+
+    const sortAsc = period === 'monthly'
+      ? { "_id.year": 1, "_id.month": 1 }
+      : { "_id.year": 1, "_id.month": 1, "_id.day": 1 };
+
+    const limitCount = period === 'monthly' ? 12 : 30;
     
     const salesData = await Order.aggregate([
+      {
+        $match: {
+          paymentStatus: "PAID"
+        }
+      },
       {
         $group: {
           _id: groupBy,
@@ -172,8 +187,9 @@ exports.getSalesChartData = async (req, res) => {
           orderCount: { $sum: 1 }
         }
       },
-      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
-      { $limit: 30 }
+      { $sort: sortDesc },
+      { $limit: limitCount },
+      { $sort: sortAsc }
     ]);
     
     res.json({ success: true, salesData });
