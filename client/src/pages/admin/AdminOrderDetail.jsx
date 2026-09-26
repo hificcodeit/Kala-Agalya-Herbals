@@ -50,7 +50,7 @@ export default function AdminOrderDetail() {
     fetchOrder();
   }, [id, navigate, fetchOrder]);
 
-  const updateOrderStatus = async (newStatus) => {
+  const updateOrderStatus = async (newStatus, customReturnReason = "", customReturnNotes = "") => {
     setUpdating(true);
     try {
       const token = localStorage.getItem("adminToken");
@@ -60,7 +60,11 @@ export default function AdminOrderDetail() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ orderStatus: newStatus }),
+        body: JSON.stringify({
+          orderStatus: newStatus,
+          returnReason: customReturnReason,
+          returnNotes: customReturnNotes
+        }),
       });
       const data = await response.json();
       if (data.success) {
@@ -305,15 +309,65 @@ export default function AdminOrderDetail() {
               )}
               <div>
                 <p className="text-[10px] text-[#9A9690] uppercase tracking-widest font-grotesk font-bold mb-1.5">Payment Status</p>
-                <span
-                  className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold font-grotesk tracking-wider uppercase border ${order.paymentStatus === "PAID"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-amber-50 text-amber-800 border-amber-200"
-                    }`}
-                >
-                  {order.paymentStatus === "PAID" && <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
-                  {order.paymentStatus}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold font-grotesk tracking-wider uppercase border ${
+                      order.paymentStatus === "REFUNDED"
+                        ? "bg-purple-50 text-purple-800 border-purple-200"
+                        : order.paymentStatus === "PAID"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : "bg-amber-50 text-amber-800 border-amber-200"
+                      }`}
+                  >
+                    {order.paymentStatus === "PAID" && <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                    {order.paymentStatus === "REFUNDED" && <span className="mr-1.5">💸</span>}
+                    {order.paymentStatus}
+                  </span>
+
+                  {order.paymentStatus === "PAID" && (
+                    <button
+                      onClick={async () => {
+                        const amt = window.prompt("Enter refund amount in ₹:", order.totalAmount);
+                        if (amt) {
+                          const note = window.prompt("Enter refund note / transaction ID:", "Refund processed for order");
+                          try {
+                            const token = localStorage.getItem("adminToken");
+                            const res = await fetch(`${API_URL}/admin/orders/${id}/refund`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ refundAmount: Number(amt), refundNote: note || "" })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              setOrder(data.order);
+                              addToast("Refund processed successfully", "success");
+                            } else {
+                              addToast(data.message || "Refund failed", "error");
+                            }
+                          } catch (err) {
+                            addToast("Error processing refund", "error");
+                          }
+                        }
+                      }}
+                      className="px-3 py-1 bg-purple-50 text-purple-800 border border-purple-200 rounded-xl hover:bg-purple-600 hover:text-white transition-all font-bold text-[10px] font-grotesk uppercase tracking-wider"
+                    >
+                      💸 Issue Refund
+                    </button>
+                  )}
+                </div>
+
+                {order.paymentStatus === "REFUNDED" && (
+                  <div className="mt-3 p-3 bg-purple-50/70 border border-purple-200 rounded-xl text-xs space-y-1 font-inter">
+                    <p className="font-bold text-purple-950 font-grotesk">Refund Amount: ₹{(order.refundAmount || order.totalAmount || 0).toFixed(0)}</p>
+                    {order.refundNote && <p className="text-purple-800">Note: {order.refundNote}</p>}
+                    {order.refundTransactionId && <p className="text-purple-700 font-mono text-[11px]">Txn Ref: {order.refundTransactionId}</p>}
+                    {order.refundDate && (
+                      <p className="text-[10px] text-purple-600">
+                        Refunded on: {new Date(order.refundDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -433,16 +487,41 @@ export default function AdminOrderDetail() {
                         ? "bg-purple-50 text-purple-900 border-purple-300"
                         : order.orderStatus === "Delivered"
                           ? "bg-emerald-50 text-emerald-900 border-emerald-300"
-                          : "bg-red-50 text-red-900 border-red-300"
+                          : order.orderStatus === "Returned"
+                            ? "bg-rose-50 text-rose-900 border-rose-300"
+                            : "bg-red-50 text-red-900 border-red-300"
                   }`}
               >
-                {order.orderStatus}
+                {order.orderStatus === "Returned" ? "↩️ Returned" : order.orderStatus}
               </span>
+
+              {order.orderStatus === "Returned" && (
+                <div className="mt-4 p-4 bg-rose-50/80 border border-rose-200 rounded-2xl text-left space-y-1.5 font-inter">
+                  <p className="text-[10px] text-rose-800 uppercase font-bold tracking-wider font-grotesk">Return Details</p>
+                  <p className="text-xs text-rose-950 font-bold">Reason: <span className="font-normal">{order.returnReason || "Customer Return"}</span></p>
+                  {order.returnNotes && (
+                    <p className="text-xs text-rose-900">Notes: <span className="italic">{order.returnNotes}</span></p>
+                  )}
+                  {order.returnedAt && (
+                    <p className="text-[11px] text-rose-700">
+                      Returned Date: {new Date(order.returnedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  )}
+                  <div className="pt-2">
+                    <Link
+                      to="/admin/returns"
+                      className="text-xs font-bold text-rose-800 underline font-grotesk uppercase tracking-wider inline-flex items-center gap-1 hover:text-rose-950"
+                    >
+                      View in Return Orders Module →
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 font-grotesk">
               <p className="text-[10px] font-bold text-[#9A9690] uppercase tracking-widest mb-1 text-center">Execute Status Update</p>
-              {order.orderStatus !== "Packed" && order.orderStatus !== "Cancelled" && order.orderStatus !== "Shipped" && order.orderStatus !== "Delivered" && (
+              {order.orderStatus !== "Packed" && order.orderStatus !== "Cancelled" && order.orderStatus !== "Shipped" && order.orderStatus !== "Delivered" && order.orderStatus !== "Returned" && (
                 <button
                   onClick={() => updateOrderStatus("Packed")}
                   disabled={updating}
@@ -469,7 +548,24 @@ export default function AdminOrderDetail() {
                   {updating ? "Processing..." : "Confirm Delivery"}
                 </button>
               )}
-              {order.orderStatus !== "Delivered" && order.orderStatus !== "Cancelled" && (
+
+              {/* Return Button (Available for Shipped or Delivered orders) */}
+              {(order.orderStatus === "Shipped" || order.orderStatus === "Delivered") && (
+                <button
+                  onClick={() => {
+                    const reason = window.prompt("Enter return reason (or leave default):", "Customer Requested Return");
+                    if (reason !== null) {
+                      updateOrderStatus("Returned", reason.trim() || "Customer Requested Return");
+                    }
+                  }}
+                  disabled={updating}
+                  className="w-full bg-rose-50 text-rose-800 border border-rose-300 py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
+                >
+                  {updating ? "Processing..." : "↩️ Process Order Return"}
+                </button>
+              )}
+
+              {order.orderStatus !== "Delivered" && order.orderStatus !== "Cancelled" && order.orderStatus !== "Returned" && (
                 <button
                   onClick={() => {
                     if (window.confirm("Are you sure you want to cancel this order?")) {

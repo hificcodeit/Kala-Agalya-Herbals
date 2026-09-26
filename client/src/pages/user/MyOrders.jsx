@@ -11,12 +11,14 @@ const STATUS_MAP = {
   "Shipped":   { level: 3, label: "Dispatched",  icon: "🚚", color: "text-purple-400", border: "border-purple-500/40", bg: "bg-purple-500", bgLight: "bg-purple-500/10" },
   "Delivered": { level: 4, label: "Delivered",   icon: "✅", color: "text-green-400",  border: "border-green-500/40",  bg: "bg-green-500",  bgLight: "bg-green-500/10" },
   "Cancelled": { level: 0, label: "Cancelled",  icon: "❌", color: "text-red-400",    border: "border-red-500/40",    bg: "bg-red-500",    bgLight: "bg-red-500/10" },
+  "Returned":  { level: 0, label: "Returned",   icon: "↩️", color: "text-rose-600",   border: "border-rose-500/40",   bg: "bg-rose-500",   bgLight: "bg-rose-500/10" },
 };
 
 const FILTERS = [
   { key: "all",       label: "All Orders" },
   { key: "active",    label: "Active" },
   { key: "delivered", label: "Delivered" },
+  { key: "returned",  label: "Returned" },
   { key: "cancelled", label: "Cancelled" },
 ];
 
@@ -65,6 +67,7 @@ export default function MyOrders() {
   const filtered = orders.filter(o => {
     if (filter === "active") return ["Pending", "Packed", "Shipped"].includes(o.orderStatus);
     if (filter === "delivered") return o.orderStatus === "Delivered";
+    if (filter === "returned") return o.orderStatus === "Returned";
     if (filter === "cancelled") return o.orderStatus === "Cancelled";
     return true;
   }).filter(o => {
@@ -190,6 +193,9 @@ export default function MyOrders() {
                           {order.paymentStatus === "PAID" && (
                             <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest bg-green-500/10 border border-green-500/30 text-green-700">✓ Paid</span>
                           )}
+                          {order.paymentStatus === "REFUNDED" && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest bg-purple-500/10 border border-purple-500/30 text-purple-800">💸 Amount Refunded</span>
+                          )}
                         </div>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#6C685F]">
                           <span>{orderDate}</span>
@@ -202,7 +208,7 @@ export default function MyOrders() {
 
                       {/* Right: Action buttons */}
                       <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
-                        {order.paymentStatus === "PAID" && (
+                        {(order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") && (
                           <button onClick={() => openInvoice(order)}
                             className="px-4 py-2 bg-[#F5F2EB] border border-yellow-500/20 rounded-xl text-[10px] font-bold uppercase tracking-widest text-yellow-700 hover:text-yellow-800 hover:border-yellow-500/40 transition-all flex items-center gap-2 font-sans">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -249,8 +255,54 @@ export default function MyOrders() {
                       </div>
                     </div>
 
-                    {/* ── Tracking Timeline (always visible) ── */}
-                    {order.orderStatus !== "Cancelled" && (
+                    {/* ── Refunded Order Message Banner ── */}
+                    {order.paymentStatus === "REFUNDED" && (
+                      <div className="mt-4 p-4 bg-purple-50/90 border border-purple-200/90 rounded-2xl flex items-start gap-3 animate-fadeIn">
+                        <span className="text-2xl shrink-0 mt-0.5">💸</span>
+                        <div className="text-xs">
+                          <p className="font-bold text-purple-950 uppercase tracking-wider font-grotesk text-[11px] flex items-center gap-2">
+                            <span>Paid Amount Refunded:</span>
+                            <span className="text-purple-900 text-sm font-black font-soria">₹{(order.refundAmount || order.totalAmount || 0).toLocaleString("en-IN")}</span>
+                          </p>
+                          <p className="text-purple-800 mt-1 leading-relaxed">
+                            The paid amount of <strong>₹{(order.refundAmount || order.totalAmount || 0).toLocaleString("en-IN")}</strong> has been refunded to your account.
+                            {order.refundTransactionId ? ` (Ref ID: ${order.refundTransactionId})` : ""}
+                            {order.refundNote ? ` — ${order.refundNote}` : ""}
+                          </p>
+                          {order.refundDate && (
+                            <p className="text-[10px] text-purple-600 mt-1.5 font-mono">
+                              Refund Date: {new Date(order.refundDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Returned Order Message Banner ── */}
+                    {order.orderStatus === "Returned" && (
+                      <div className="mt-4 p-4 bg-rose-50/90 border border-rose-200/90 rounded-2xl flex items-start gap-3">
+                        <span className="text-2xl shrink-0 mt-0.5">↩️</span>
+                        <div className="text-xs">
+                          <p className="font-bold text-rose-950 uppercase tracking-wider font-grotesk text-[11px]">
+                            Order Status: Returned
+                          </p>
+                          <p className="text-rose-800 mt-1 leading-relaxed">
+                            {order.returnReason ? (
+                              <span>Reason: <strong>{order.returnReason}</strong>. </span>
+                            ) : null}
+                            This order has been processed as returned. If a replacement or refund is applicable, our team is handling it. For further queries, please reach out to our customer support.
+                          </p>
+                          {order.returnedAt && (
+                            <p className="text-[10px] text-rose-600 mt-1.5 font-mono">
+                              Processed on: {new Date(order.returnedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Tracking Timeline (always visible when not cancelled & not returned) ── */}
+                    {order.orderStatus !== "Cancelled" && order.orderStatus !== "Returned" && (
                       <div className="mt-5 pt-4 border-t border-yellow-500/10">
                         {/* Desktop horizontal timeline */}
                         <div className="hidden sm:flex items-center w-full max-w-lg">
@@ -335,7 +387,15 @@ export default function MyOrders() {
                           </div>
                           <div>
                             <div className="text-[9px] font-bold text-[#7C786E] uppercase tracking-widest mb-1">Payment</div>
-                            <div className="text-xs text-[#2C2921]">{order.paymentStatus} {order.paymentId ? `• ${order.paymentId}` : ""}</div>
+                            <div className="text-xs text-[#2C2921]">
+                              {order.paymentStatus === "REFUNDED" ? (
+                                <span className="text-purple-800 font-bold">
+                                  REFUNDED (₹{(order.refundAmount || order.totalAmount || 0).toLocaleString("en-IN")})
+                                </span>
+                              ) : (
+                                <span>{order.paymentStatus} {order.paymentId ? `• ${order.paymentId}` : ""}</span>
+                              )}
+                            </div>
                           </div>
                           <div>
                             <div className="text-[9px] font-bold text-[#7C786E] uppercase tracking-widest mb-1">Shipping To</div>

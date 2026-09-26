@@ -13,10 +13,15 @@ router.get("/dashboard/sales-chart", adminOrderController.getSalesChartData);
 // Reports (must be before /:id to avoid wildcard conflict)
 router.get("/reports/data", adminOrderController.getReports);
 
+// Returns management & reports (must be before /:id to avoid wildcard conflict)
+router.get("/returns/list", adminOrderController.getReturnedOrders);
+router.get("/returns/reports", adminOrderController.getReturnReports);
+
 // Orders management
 router.get("/", adminOrderController.getAllOrders);
 router.put("/:id/status", adminOrderController.updateOrderStatus);
 router.put("/:id/mark-paid", adminOrderController.markOrderAsPaid);
+router.put("/:id/refund", adminOrderController.processRefund);
 router.put("/:id/tracking", adminOrderController.updateTracking);
 router.get("/:id", adminOrderController.getOrder);
 

@@ -74,11 +74,21 @@ export default function AdminLayout({ children }) {
             />
             <SidebarItem 
               to="/admin/orders" 
-              active={location.pathname.includes("/admin/orders")}
+              active={location.pathname === "/admin/orders" || (location.pathname.startsWith("/admin/orders") && !location.pathname.includes("/admin/returns"))}
               label="Orders"
               icon={
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              }
+            />
+            <SidebarItem 
+              to="/admin/returns" 
+              active={location.pathname.includes("/admin/returns")}
+              label="Return Orders"
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                 </svg>
               }
             />
