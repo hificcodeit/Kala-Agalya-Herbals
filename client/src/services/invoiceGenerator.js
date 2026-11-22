@@ -1,10 +1,11 @@
 // ─── Invoice PDF Generator (Shared Utility) ──────────────────────────────────
 export function generateInvoiceHTML(order) {
-  const invoiceNo = `KAH-${order.orderId || (order._id ? order._id.toString().slice(-8).toUpperCase() : "ORDER")}`;
-  const date = new Date(order.paymentDate || order.createdAt).toLocaleDateString("en-IN", {
+  const invoiceNo = order.invoiceNumber || (order.orderId ? (order.orderId.startsWith("KAH-") ? order.orderId : `KAH-${order.orderId}`) : `KAH-${order._id ? order._id.toString().slice(-8).toUpperCase() : "ORDER"}`);
+  const dateObj = new Date(order.paymentDate || order.orderDate || order.createdAt || Date.now());
+  const date = dateObj.toLocaleDateString("en-IN", {
     day: "2-digit", month: "short", year: "numeric"
   });
-  const time = new Date(order.paymentDate || order.createdAt).toLocaleTimeString("en-IN", {
+  const time = dateObj.toLocaleTimeString("en-IN", {
     hour: "2-digit", minute: "2-digit"
   });
 
@@ -12,7 +13,7 @@ export function generateInvoiceHTML(order) {
   const gstAmount = Math.round(subtotal * 0.18);
   const shipping = Number(order.shippingAmount) || 0;
   const crossedTotal = subtotal + gstAmount + shipping;
-  const finalAmount = subtotal + shipping;
+  const finalAmount = order.totalAmount !== undefined && order.totalAmount !== null ? Number(order.totalAmount) : subtotal + shipping;
 
   const itemsRows = (order.items || []).map((item, idx) => `
     <tr>
@@ -27,8 +28,20 @@ export function generateInvoiceHTML(order) {
   `).join("");
 
   const addr = order.customer?.address || {};
-  const addressParts = [addr.door, addr.street, addr.landmark, addr.district, addr.state, addr.pincode].filter(Boolean);
-  const fullAddress = addressParts.length > 0 ? addressParts.join(", ") : "Address not provided";
+  let fullAddress = "Address not provided";
+  if (typeof addr === "string") {
+    fullAddress = addr;
+  } else if (addr.fullAddress) {
+    fullAddress = addr.fullAddress;
+  } else {
+    const addressParts = [addr.door, addr.street, addr.landmark, addr.district, addr.state, addr.pincode].filter(Boolean);
+    if (addressParts.length > 0) {
+      fullAddress = addressParts.join(", ");
+    }
+  }
+
+  const customerPhone = order.customer?.phone || order.customer?.mobileNumber || "";
+  const customerWhatsApp = order.customer?.whatsappNumber || "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -529,8 +542,9 @@ export function generateInvoiceHTML(order) {
           <div class="info-name">${order.customer?.name || "Customer"}</div>
           <div class="info-details">
             ${order.customer?.email ? `✉ ${order.customer.email}<br/>` : ""}
-            ${order.customer?.phone ? `📞 ${order.customer.phone}` : ""}
+            ${customerPhone ? `📞 ${customerPhone}` : ""}
             ${order.customer?.altPhone ? ` / ${order.customer.altPhone}` : ""}
+            ${customerWhatsApp && customerWhatsApp !== customerPhone ? `<br/>💬 WhatsApp: ${customerWhatsApp}` : ""}
           </div>
         </div>
 

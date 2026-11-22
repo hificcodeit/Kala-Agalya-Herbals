@@ -72,6 +72,7 @@ app.use("/api/orders", require("./routes/orderRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/products", require("./routes/productRoutes"));
 app.use("/api/admin/orders", require("./routes/adminOrderRoutes"));
+app.use("/api/admin/whatsapp-orders", require("./routes/adminWhatsAppOrderRoutes"));
 app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/banners", require("./routes/bannerRoutes"));

@@ -11,6 +11,7 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
+import AdminWhatsAppOrders from "./pages/admin/AdminWhatsAppOrders";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminReturns from "./pages/admin/AdminReturns";
@@ -154,6 +155,7 @@ function Layout() {
           <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
           <Route path="/admin/orders/:id" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
           <Route path="/admin/returns" element={<AdminRoute><AdminReturns /></AdminRoute>} />
+          <Route path="/admin/whatsapp-orders" element={<AdminRoute><AdminWhatsAppOrders /></AdminRoute>} />
           <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
           <Route path="/admin/banners" element={<AdminRoute><AdminBanners /></AdminRoute>} />
           <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
