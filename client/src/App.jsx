@@ -30,6 +30,7 @@ import AdminQueries from "./pages/admin/AdminQueries";
 import { ToastProvider } from "./components/Alert";
 import Footer from "./components/Footer.jsx";
 import Contact from "./pages/Contact";
+import InvoiceView from "./pages/InvoiceView";
 import About from "./pages/About";
 import PrivacyPolicy from "./pages/policies/PrivacyPolicy";
 import RefundPolicy from "./pages/policies/RefundPolicy";
@@ -78,6 +79,7 @@ function Layout() {
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAuthRoute  = ["/login", "/register", "/forgot-password"].includes(location.pathname)
     || location.pathname.startsWith("/reset-password");
+  const isInvoiceRoute = location.pathname.startsWith("/invoice");
 
   // Global scroll animations
   useScrollAnimation();
@@ -89,10 +91,12 @@ function Layout() {
 
   return (
     <>
-      {(!isAdminRoute && !isAuthRoute) && <Navbar />}
+      {(!isAdminRoute && !isAuthRoute && !isInvoiceRoute) && <Navbar />}
       <main>
         <Routes>
           {/* Public Pages */}
+          <Route path="/invoice/:id" element={<InvoiceView />} />
+          <Route path="/invoice/view/:id" element={<InvoiceView />} />
           <Route 
             path="/" 
             element={<Landing />} 
@@ -164,7 +168,7 @@ function Layout() {
           <Route path="/admin/queries" element={<AdminRoute><AdminQueries /></AdminRoute>} />
         </Routes>
       </main>
-      {(!isAdminRoute && !isAuthRoute) && <Footer />}
+      {(!isAdminRoute && !isAuthRoute && !isInvoiceRoute) && <Footer />}
     </>
   );
 }

@@ -303,6 +303,15 @@ exports.getOrderById = async (req, res) => {
     } else {
       order = await Order.findOne({ orderId: orderId });
     }
+    // If not found in website orders, check WhatsApp orders
+    if (!order) {
+      const WhatsAppOrder = require("../models/WhatsAppOrder");
+      if (mongoose.Types.ObjectId.isValid(orderId)) {
+        order = await WhatsAppOrder.findById(orderId);
+      } else {
+        order = await WhatsAppOrder.findOne({ orderId: orderId }) || await WhatsAppOrder.findOne({ invoiceNumber: orderId });
+      }
+    }
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
     res.json({ success: true, order });
   } catch (err) {

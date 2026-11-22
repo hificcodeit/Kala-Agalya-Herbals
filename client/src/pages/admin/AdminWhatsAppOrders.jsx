@@ -28,6 +28,7 @@ export default function AdminWhatsAppOrders() {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalMode, setModalMode] = useState("create"); // 'create' | 'edit'
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Form state for Create / Edit
   const [formData, setFormData] = useState({
@@ -473,7 +474,40 @@ export default function AdminWhatsAppOrders() {
     }
   };
 
-  // ── WhatsApp Messaging Function ──────────────────────────────────────────
+  // Fast status update from view popup or table
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    if (!orderId || !newStatus) return;
+    setUpdatingStatus(true);
+    try {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch(`${API_URL}/admin/whatsapp-orders/${orderId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ orderStatus: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(`Order status updated to "${newStatus}"`, "success");
+        setSelectedOrder((prev) => (prev ? { ...prev, orderStatus: newStatus } : null));
+        setOrders((prev) =>
+          prev.map((o) => (o._id === orderId ? { ...o, orderStatus: newStatus } : o))
+        );
+        fetchOrders();
+      } else {
+        addToast(data.message || "Failed to update status", "error");
+      }
+    } catch (err) {
+      console.error("Error updating status:", err);
+      addToast("Network error updating status", "error");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // ── WhatsApp Messaging Function with PDF Auto-Trigger & Direct Invoice Link ──
   const handleSendWhatsAppMessage = (order) => {
     if (!order) return;
     const phone = clean10Digits(order.customer?.whatsappNumber || order.customer?.mobileNumber);
@@ -481,6 +515,9 @@ export default function AdminWhatsAppOrders() {
       addToast("No valid WhatsApp phone number found for this customer", "error");
       return;
     }
+
+    // 1. Immediately trigger the official printable invoice PDF dialog on the admin device
+    openInvoice(order);
 
     const waPhone = phone.startsWith("91") ? phone : `91${phone}`;
     const customerName = order.customer?.name || "Valued Customer";
@@ -511,23 +548,29 @@ export default function AdminWhatsAppOrders() {
         .join(", ") ||
       "Provided Address";
 
+    // Direct link for customer to view/download official tax invoice PDF on mobile
+    const invoicePdfLink = `${window.location.origin}/invoice/${order.orderId || order._id}`;
+
     const message =
-      `🌿 *KALA AGALYA HERBALS - ORDER CONFIRMATION* 🌿\n\n` +
+      `🌿 *KALA AGALYA HERBALS - ORDER INVOICE* 🌿\n\n` +
       `Hello *${customerName}*! 👋\n` +
-      `Thank you for placing your order with Kala Agalya Herbals!\n\n` +
+      `Thank you for your order with Kala Agalya Herbals!\n\n` +
       `📄 *Invoice No:* ${invoiceNo}\n` +
       `🗓️ *Order Date:* ${orderDate}\n` +
       `📦 *Items Ordered:*\n${itemsSummary}\n\n` +
-      `💰 *Total Amount:* ₹${(Number(order.totalAmount) || 0).toFixed(0)} (Payment: ${order.paymentStatus || "PAID"})\n` +
+      `💰 *Total Amount:* ₹${(Number(order.totalAmount) || 0).toFixed(0)} (Status: ${order.paymentStatus || "PAID"})\n` +
       `📍 *Delivery Address:*\n${fullAddr}\n\n` +
-      `✨ Your tax invoice has been generated. Our herbal specialists are handcrafting and packing your items with care. You will receive courier dispatch updates soon!\n\n` +
-      `For questions or assistance, feel free to reply directly here.\n` +
-      `🍃 *Stay Natural, Live Healthy!*`;
+      `📥 *Download Your Official Tax Invoice (PDF):*\n` +
+      `👉 ${invoicePdfLink}\n\n` +
+      `✨ Tap the link above to view or download your official tax invoice anytime.\n` +
+      `Our herbal team is preparing your package with care! 🍃\n\n` +
+      `For queries, reply directly to this chat.\n` +
+      `*Kala Agalya Herbals*`;
 
     const encoded = encodeURIComponent(message);
     const waUrl = `https://wa.me/${waPhone}?text=${encoded}`;
     window.open(waUrl, "_blank", "noopener,noreferrer");
-    addToast(`Opened WhatsApp chat for ${customerName} 💬`, "info");
+    addToast(`Invoice PDF opened & WhatsApp chat launched for ${customerName} 💬`, "success");
   };
 
   // ── Excel & CSV Exports ──────────────────────────────────────────────────
@@ -1574,27 +1617,52 @@ export default function AdminWhatsAppOrders() {
                   </div>
                 </div>
 
-                {/* WhatsApp & Invoice Actions */}
-                <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold text-emerald-900 font-grotesk">Send Invoice to Customer</p>
-                    <p className="text-[11px] text-emerald-700">
-                      Opens WhatsApp chat with invoice summary pre-filled. Attach the downloaded PDF directly in chat.
-                    </p>
+                {/* Order Status Change Control Panel */}
+                <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-yellow-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider font-grotesk">
+                        Order Status Control
+                      </p>
+                      <p className="text-[11px] text-gray-600 font-inter">
+                        Click a status below to update this order instantly
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold font-grotesk uppercase tracking-wider border ${getStatusBadge(
+                        selectedOrder.orderStatus
+                      )}`}
+                    >
+                      {updatingStatus ? "Updating..." : `Current: ${selectedOrder.orderStatus}`}
+                    </span>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openInvoice(selectedOrder)}
-                      className="px-3 py-2 bg-white text-gray-800 border border-gray-300 rounded-xl hover:bg-gray-50 font-bold font-grotesk text-xs uppercase tracking-wider flex items-center gap-1 shadow-xs"
-                    >
-                      <span>🖨️ Download PDF</span>
-                    </button>
-                    <button
-                      onClick={() => handleSendWhatsAppMessage(selectedOrder)}
-                      className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl hover:from-emerald-500 hover:to-green-500 font-bold font-grotesk text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-                    >
-                      <span>💬 Open WhatsApp</span>
-                    </button>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                    {[
+                      { status: "Pending", icon: "⏳", color: "hover:border-amber-400 hover:bg-amber-50" },
+                      { status: "Packed", icon: "📦", color: "hover:border-blue-400 hover:bg-blue-50" },
+                      { status: "Shipped", icon: "🚚", color: "hover:border-purple-400 hover:bg-purple-50" },
+                      { status: "Delivered", icon: "✅", color: "hover:border-emerald-400 hover:bg-emerald-50" },
+                      { status: "Cancelled", icon: "🚫", color: "hover:border-red-400 hover:bg-red-50" }
+                    ].map(({ status, icon, color }) => {
+                      const isCurrent = selectedOrder.orderStatus === status;
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          disabled={updatingStatus || isCurrent}
+                          onClick={() => handleUpdateStatus(selectedOrder._id, status)}
+                          className={`py-2 px-2 rounded-xl text-xs font-bold font-grotesk uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-xs border ${
+                            isCurrent
+                              ? "bg-yellow-800 text-white border-yellow-800 shadow-sm ring-2 ring-yellow-600/30 cursor-default"
+                              : `bg-white text-gray-700 border-gray-200 ${color} active:scale-95`
+                          } ${updatingStatus ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <span>{icon}</span>
+                          <span>{status}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
