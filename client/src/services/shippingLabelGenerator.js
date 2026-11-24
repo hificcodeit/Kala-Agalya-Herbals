@@ -474,3 +474,4 @@ export function openShippingLabels(orders) {
     document.body.removeChild(a);
   }
 }
+
