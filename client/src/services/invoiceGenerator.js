@@ -1,55 +1,7 @@
 // ─── Invoice PDF Generator (Shared Utility) ──────────────────────────────────
-export function generateInvoiceHTML(order) {
-  const invoiceNo = order.invoiceNumber || (order.orderId ? (order.orderId.startsWith("KAH-") ? order.orderId : `KAH-${order.orderId}`) : `KAH-${order._id ? order._id.toString().slice(-8).toUpperCase() : "ORDER"}`);
-  const dateObj = new Date(order.paymentDate || order.orderDate || order.createdAt || Date.now());
-  const date = dateObj.toLocaleDateString("en-IN", {
-    day: "2-digit", month: "short", year: "numeric"
-  });
-  const time = dateObj.toLocaleTimeString("en-IN", {
-    hour: "2-digit", minute: "2-digit"
-  });
 
-  const subtotal = (order.items || []).reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
-  const gstAmount = Math.round(subtotal * 0.18);
-  const shipping = Number(order.shippingAmount) || 0;
-  const crossedTotal = subtotal + gstAmount + shipping;
-  const finalAmount = order.totalAmount !== undefined && order.totalAmount !== null ? Number(order.totalAmount) : subtotal + shipping;
-
-  const itemsRows = (order.items || []).map((item, idx) => `
-    <tr>
-      <td class="td-product">
-        <div class="prod-name">${item.name || "Herbal Product"}</div>
-        ${item.size ? `<span class="prod-size-badge">${item.size}</span>` : ""}
-      </td>
-      <td class="td-center">${item.quantity || 1}</td>
-      <td class="td-right">₹${(Number(item.price) || 0).toFixed(2)}</td>
-      <td class="td-right td-total">₹${((Number(item.price) || 0) * (Number(item.quantity) || 1)).toFixed(2)}</td>
-    </tr>
-  `).join("");
-
-  const addr = order.customer?.address || {};
-  let fullAddress = "Address not provided";
-  if (typeof addr === "string") {
-    fullAddress = addr;
-  } else if (addr.fullAddress) {
-    fullAddress = addr.fullAddress;
-  } else {
-    const addressParts = [addr.door, addr.street, addr.landmark, addr.district, addr.state, addr.pincode].filter(Boolean);
-    if (addressParts.length > 0) {
-      fullAddress = addressParts.join(", ");
-    }
-  }
-
-  const customerPhone = order.customer?.phone || order.customer?.mobileNumber || "";
-  const customerWhatsApp = order.customer?.whatsappNumber || "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-  <title>Tax Invoice #${invoiceNo} | Kala Agalya Herbals</title>
-  <style>
+export function getInvoiceStyles() {
+  return `
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap');
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -82,7 +34,7 @@ export function generateInvoiceHTML(order) {
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: rgba(14, 12, 6, 0.92);
+      background: rgba(14, 12, 6, 0.95);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid #332608;
       padding: 12px 20px;
@@ -312,41 +264,34 @@ export function generateInvoiceHTML(order) {
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: var(--gold-light);
+      color: var(--gold-primary);
     }
-    th.th-center, td.td-center { text-align: center; }
-    th.th-right, td.td-right { text-align: right; }
-    
+    .th-center { text-align: center; }
+    .th-right { text-align: right; }
     td {
       padding: 14px 16px;
-      border-bottom: 1px solid #241c0b;
+      border-bottom: 1px solid #261e0c;
       font-size: 13px;
-      color: var(--text-main);
     }
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-    .td-product .prod-name {
-      font-weight: 600;
-      color: #fff;
-    }
+    tr:last-child td { border-bottom: none; }
+    .td-product { font-weight: 600; color: #f3f4f6; }
+    .td-center { text-align: center; font-weight: 600; color: #d1d5db; }
+    .td-right { text-align: right; font-weight: 600; color: #d1d5db; font-family: monospace; }
+    .td-total { color: var(--gold-light); font-weight: 700; }
+    .prod-name { font-size: 13.5px; }
     .prod-size-badge {
       display: inline-block;
       font-size: 10px;
       font-weight: 700;
-      background: #2b200b;
-      color: var(--gold-light);
-      padding: 2px 7px;
-      border-radius: 5px;
+      color: #d97706;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      padding: 1px 7px;
+      border-radius: 6px;
       margin-top: 4px;
-      text-transform: uppercase;
-    }
-    .td-total {
-      font-weight: 700;
-      color: var(--gold-light);
     }
 
-    /* Summary / Totals */
+    /* Summary Section */
     .summary-section {
       display: flex;
       justify-content: flex-end;
@@ -354,47 +299,49 @@ export function generateInvoiceHTML(order) {
     }
     .summary-card {
       width: 100%;
-      max-width: 340px;
+      max-width: 320px;
       background: #18150c;
       border: 1px solid var(--card-border);
       border-radius: 14px;
-      padding: 18px 22px;
+      padding: 18px 20px;
     }
     .summary-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 0;
       font-size: 13px;
       color: var(--text-muted);
+      margin-bottom: 10px;
     }
     .summary-row.discount {
-      color: var(--text-dim);
       font-size: 12px;
+      color: var(--text-dim);
     }
     .summary-row.discount .val {
       text-decoration: line-through;
     }
     .summary-row.grand-total {
-      margin-top: 10px;
-      padding-top: 12px;
-      border-top: 1px solid #38290f;
-      font-size: 17px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--card-border);
+      font-size: 16px;
       font-weight: 800;
       color: var(--gold-light);
+      font-family: 'Space Grotesk', sans-serif;
     }
 
     /* Footer */
     .footer-section {
       text-align: center;
-      padding-top: 24px;
       border-top: 1px solid var(--card-border);
+      padding-top: 24px;
     }
     .footer-brand {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
-      color: var(--gold-light);
+      color: var(--gold-primary);
+      letter-spacing: 1px;
     }
     .footer-thanks {
       font-size: 12px;
@@ -482,28 +429,65 @@ export function generateInvoiceHTML(order) {
         break-inside: avoid;
         page-break-inside: avoid;
       }
+      .batch-invoice-item {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .batch-invoice-item:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }
     }
-  </style>
-</head>
-<body>
+  `;
+}
 
-  <!-- Screen Action Floating Bar (Hidden when printed to PDF) -->
-  <div class="screen-actions no-print">
-    <div class="left-info">
-      <span>🌿 Kala Agalya Herbals</span>
-      <span>•</span>
-      <span>Invoice #${invoiceNo}</span>
-    </div>
-    <div class="btn-group">
-      <button class="action-btn btn-close" onclick="window.close()">✕ Close</button>
-      <button class="action-btn btn-print" onclick="window.print()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
-        Download / Print PDF
-      </button>
-    </div>
-  </div>
+// ─── Render Single Invoice Card HTML ─────────────────────────────────────────
+export function renderSingleInvoiceCard(order) {
+  const invoiceNo = order.invoiceNumber || (order.orderId ? (order.orderId.startsWith("KAH-") ? order.orderId : `KAH-${order.orderId}`) : `KAH-${order._id ? order._id.toString().slice(-8).toUpperCase() : "ORDER"}`);
+  const dateObj = new Date(order.paymentDate || order.orderDate || order.createdAt || Date.now());
+  const date = dateObj.toLocaleDateString("en-IN", {
+    day: "2-digit", month: "short", year: "numeric"
+  });
+  const time = dateObj.toLocaleTimeString("en-IN", {
+    hour: "2-digit", minute: "2-digit"
+  });
 
-  <div class="invoice-wrapper">
+  const subtotal = (order.items || []).reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
+  const gstAmount = Math.round(subtotal * 0.18);
+  const shipping = Number(order.shippingAmount) || 0;
+  const crossedTotal = subtotal + gstAmount + shipping;
+  const finalAmount = order.totalAmount !== undefined && order.totalAmount !== null ? Number(order.totalAmount) : subtotal + shipping;
+
+  const itemsRows = (order.items || []).map((item) => `
+    <tr>
+      <td class="td-product">
+        <div class="prod-name">${item.name || "Herbal Product"}</div>
+        ${item.size ? `<span class="prod-size-badge">${item.size}</span>` : ""}
+      </td>
+      <td class="td-center">${item.quantity || 1}</td>
+      <td class="td-right">₹${(Number(item.price) || 0).toFixed(2)}</td>
+      <td class="td-right td-total">₹${((Number(item.price) || 0) * (Number(item.quantity) || 1)).toFixed(2)}</td>
+    </tr>
+  `).join("");
+
+  const addr = order.customer?.address || {};
+  let fullAddress = "Address not provided";
+  if (typeof addr === "string") {
+    fullAddress = addr;
+  } else if (addr.fullAddress) {
+    fullAddress = addr.fullAddress;
+  } else {
+    const addressParts = [addr.door, addr.street, addr.landmark, addr.district, addr.state, addr.pincode].filter(Boolean);
+    if (addressParts.length > 0) {
+      fullAddress = addressParts.join(", ");
+    }
+  }
+
+  const customerPhone = order.customer?.phone || order.customer?.mobileNumber || "";
+  const customerWhatsApp = order.customer?.whatsappNumber || "";
+
+  return `
+  <div class="invoice-wrapper batch-invoice-item">
     <div class="invoice-card">
       
       <!-- Header -->
@@ -611,12 +595,88 @@ export function generateInvoiceHTML(order) {
       </div>
 
     </div>
+  </div>`;
+}
+
+// ─── Generate Single Invoice HTML Document ──────────────────────────────────
+export function generateInvoiceHTML(order) {
+  const invoiceNo = order.invoiceNumber || (order.orderId ? (order.orderId.startsWith("KAH-") ? order.orderId : `KAH-${order.orderId}`) : `KAH-${order._id ? order._id.toString().slice(-8).toUpperCase() : "ORDER"}`);
+  const cardHtml = renderSingleInvoiceCard(order);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Tax Invoice #${invoiceNo} | Kala Agalya Herbals</title>
+  <style>
+    ${getInvoiceStyles()}
+  </style>
+</head>
+<body>
+
+  <!-- Screen Action Floating Bar (Hidden when printed to PDF) -->
+  <div class="screen-actions no-print">
+    <div class="left-info">
+      <span>🌿 Kala Agalya Herbals</span>
+      <span>•</span>
+      <span>Invoice #${invoiceNo}</span>
+    </div>
+    <div class="btn-group">
+      <button class="action-btn btn-close" onclick="window.close()">✕ Close</button>
+      <button class="action-btn btn-print" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+        Download / Print PDF
+      </button>
+    </div>
   </div>
+
+  ${cardHtml}
 
 </body>
 </html>`;
 }
 
+// ─── Generate Batch Invoices HTML Document (Multi-Order Single Print) ───────
+export function generateBatchInvoicesHTML(orders) {
+  if (!Array.isArray(orders) || orders.length === 0) return "";
+  const allCardsHtml = orders.map(renderSingleInvoiceCard).join("\n<hr class='no-print' style='border:1px dashed #3a2e12; margin: 30px auto; max-width:820px;' />\n");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Batch Invoices (${orders.length} Orders) | Kala Agalya Herbals</title>
+  <style>
+    ${getInvoiceStyles()}
+  </style>
+</head>
+<body>
+
+  <!-- Screen Action Floating Bar for Batch Printing -->
+  <div class="screen-actions no-print">
+    <div class="left-info">
+      <span>🌿 Kala Agalya Herbals</span>
+      <span>•</span>
+      <span>Batch Printing: ${orders.length} Invoices</span>
+    </div>
+    <div class="btn-group">
+      <button class="action-btn btn-close" onclick="window.close()">✕ Close</button>
+      <button class="action-btn btn-print" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+        Print All Invoices (${orders.length})
+      </button>
+    </div>
+  </div>
+
+  ${allCardsHtml}
+
+</body>
+</html>`;
+}
+
+// ─── Open Single Invoice Window ─────────────────────────────────────────────
 export function openInvoice(order) {
   if (!order) return;
   const html = generateInvoiceHTML(order);
@@ -625,7 +685,25 @@ export function openInvoice(order) {
   
   const win = window.open(url, "_blank");
   if (!win || win.closed || typeof win.closed === "undefined") {
-    // If popup was blocked, fallback to creating a hidden download link or navigating
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+}
+
+// ─── Open Batch Invoices Window (Print All Selected) ─────────────────────────
+export function openBatchInvoices(orders) {
+  if (!Array.isArray(orders) || orders.length === 0) return;
+  const html = generateBatchInvoicesHTML(orders);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  
+  const win = window.open(url, "_blank");
+  if (!win || win.closed || typeof win.closed === "undefined") {
     const a = document.createElement("a");
     a.href = url;
     a.target = "_blank";

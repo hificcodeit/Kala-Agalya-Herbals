@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const crypto = require("crypto");
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
 const cache = require("../utils/cache");
 
 const PHONEPE_TOKEN_CACHE_KEY = "phonepe_auth_token";
@@ -297,12 +298,16 @@ exports.getOrderById = async (req, res) => {
   try {
     const rawId = req.params.id;
     const orderId = rawId.startsWith("T") ? rawId.slice(1) : rawId;
+    const { token } = req.query;
+
     let order;
     if (mongoose.Types.ObjectId.isValid(orderId)) {
       order = await Order.findById(orderId);
     } else {
       order = await Order.findOne({ orderId: orderId });
     }
+
+    let isWhatsAppOrder = false;
     // If not found in website orders, check WhatsApp orders
     if (!order) {
       const WhatsAppOrder = require("../models/WhatsAppOrder");
@@ -311,8 +316,55 @@ exports.getOrderById = async (req, res) => {
       } else {
         order = await WhatsAppOrder.findOne({ orderId: orderId }) || await WhatsAppOrder.findOne({ invoiceNumber: orderId });
       }
+      if (order) isWhatsAppOrder = true;
     }
+
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+
+    // Check if requester is authenticated admin (always bypass expiry for admin preview/download)
+    let isAdmin = false;
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+      try {
+        const authToken = req.headers.authorization.split(" ")[1];
+        const decodedAdmin = jwt.verify(authToken, process.env.JWT_SECRET);
+        if (decodedAdmin && decodedAdmin.id) isAdmin = true;
+      } catch (e) {}
+    }
+
+    // For WhatsApp orders viewed publicly by customer, enforce the 20-minute timed security link
+    if (isWhatsAppOrder && !isAdmin) {
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          securityProtected: true,
+          message: "A secure verification link is required to view this invoice. Please click the official link sent to your WhatsApp number."
+        });
+      }
+
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.orderId !== order.orderId && decoded.invoiceNumber !== order.invoiceNumber) {
+          return res.status(403).json({
+            success: false,
+            message: "Security verification failed for this invoice link."
+          });
+        }
+      } catch (err) {
+        if (err.name === "TokenExpiredError") {
+          return res.status(410).json({
+            success: false,
+            expired: true,
+            orderId: order.orderId,
+            message: "This invoice link has expired for your privacy & security (valid for 20 minutes). Please request a fresh link on WhatsApp."
+          });
+        }
+        return res.status(401).json({
+          success: false,
+          message: "Invalid or expired security token."
+        });
+      }
+    }
+
     res.json({ success: true, order });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

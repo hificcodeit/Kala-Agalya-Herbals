@@ -9,6 +9,9 @@ router.use(adminAuth);
 // Bulk import endpoint (before :id parameter to avoid collision)
 router.post("/bulk-import", whatsappOrderController.bulkImportWhatsAppOrders);
 
+// 20-minute timed share token for WhatsApp
+router.get("/:id/share-token", whatsappOrderController.getInvoiceShareToken);
+
 // Standard CRUD
 router.get("/", whatsappOrderController.getAllWhatsAppOrders);
 router.post("/", whatsappOrderController.createWhatsAppOrder);

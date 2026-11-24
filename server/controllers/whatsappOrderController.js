@@ -1,5 +1,7 @@
 const WhatsAppOrder = require("../models/WhatsAppOrder");
 const Product = require("../models/Product");
+const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
 // Helper to generate unique orderId
 async function generateUniqueOrderId() {
@@ -599,6 +601,49 @@ exports.bulkImportWhatsAppOrders = async (req, res) => {
   } catch (error) {
     console.error("Error bulk importing WhatsApp orders:", error);
     res.status(500).json({ success: false, message: "Bulk import failed", error: error.message });
+  }
+};
+
+// 7. Generate a 20-Minute Secure Expiring Token for WhatsApp Invoice Link
+exports.getInvoiceShareToken = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let order;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      order = await WhatsAppOrder.findById(id);
+    }
+    if (!order) {
+      order = (await WhatsAppOrder.findOne({ orderId: id })) || (await WhatsAppOrder.findOne({ invoiceNumber: id }));
+    }
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const secret = process.env.JWT_SECRET || "kala_agalya_jwt_secret";
+    // Sign token with 20 minutes validity
+    const token = jwt.sign(
+      {
+        orderId: order.orderId,
+        invoiceNumber: order.invoiceNumber,
+        type: "whatsapp_invoice"
+      },
+      secret,
+      { expiresIn: "20m" }
+    );
+
+    const expTime = Date.now() + 20 * 60 * 1000;
+
+    res.json({
+      success: true,
+      token,
+      expiresAt: expTime,
+      expiresInMinutes: 20,
+      orderId: order.orderId
+    });
+  } catch (error) {
+    console.error("Error generating invoice share token:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 

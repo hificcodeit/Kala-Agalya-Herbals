@@ -5,7 +5,7 @@ import { API_URL } from "../../services/api";
 import { useToast } from "../../components/Alert";
 import AdminLayout from "./AdminLayout";
 import WhatsAppBulkImportModal from "./WhatsAppBulkImportModal";
-import { openInvoice } from "../../services/invoiceGenerator";
+import { openInvoice, openBatchInvoices } from "../../services/invoiceGenerator";
 
 export default function AdminWhatsAppOrders() {
   const [orders, setOrders] = useState([]);
@@ -29,6 +29,7 @@ export default function AdminWhatsAppOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalMode, setModalMode] = useState("create"); // 'create' | 'edit'
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
 
   // Form state for Create / Edit
   const [formData, setFormData] = useState({
@@ -507,8 +508,37 @@ export default function AdminWhatsAppOrders() {
     }
   };
 
-  // ── WhatsApp Messaging Function with PDF Auto-Trigger & Direct Invoice Link ──
-  const handleSendWhatsAppMessage = (order) => {
+  // Batch selection helpers
+  const isAllSelected =
+    filteredOrders.length > 0 &&
+    filteredOrders.every((o) => selectedOrderIds.includes(o._id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(filteredOrders.map((o) => o._id));
+    }
+  };
+
+  const handleToggleSelectOrder = (id) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handlePrintSelected = () => {
+    const selectedOrders = orders.filter((o) => selectedOrderIds.includes(o._id));
+    if (selectedOrders.length === 0) {
+      addToast("Please select at least one order to print", "error");
+      return;
+    }
+    openBatchInvoices(selectedOrders);
+    addToast(`Opening batch print view for ${selectedOrders.length} invoice(s)... 🖨️`, "info");
+  };
+
+  // ── WhatsApp Messaging Function with 20-Minute Secure Expiring PDF Link ──
+  const handleSendWhatsAppMessage = async (order) => {
     if (!order) return;
     const phone = clean10Digits(order.customer?.whatsappNumber || order.customer?.mobileNumber);
     if (!phone) {
@@ -516,61 +546,87 @@ export default function AdminWhatsAppOrders() {
       return;
     }
 
-    // 1. Immediately trigger the official printable invoice PDF dialog on the admin device
-    openInvoice(order);
+    // Open blank window immediately to prevent popup blocker during async fetch
+    const waWin = window.open("about:blank", "_blank");
 
-    const waPhone = phone.startsWith("91") ? phone : `91${phone}`;
-    const customerName = order.customer?.name || "Valued Customer";
-    const invoiceNo = order.invoiceNumber || `KAH-WA-${order.orderId}`;
-    const orderDate = new Date(order.orderDate || order.createdAt).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
+    try {
+      const token = localStorage.getItem("adminToken");
+      let shareToken = "";
+      try {
+        const res = await fetch(`${API_URL}/admin/whatsapp-orders/${order._id}/share-token`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          shareToken = data.token;
+        }
+      } catch (err) {
+        console.warn("Could not obtain expiring share token:", err);
+      }
 
-    const itemsSummary = (order.items || [])
-      .map(
-        (i, idx) =>
-          `  ${idx + 1}. *${i.name}* (${i.size || "Standard"}) x${i.quantity || 1} - ₹${((i.price || 0) * (i.quantity || 1)).toFixed(0)}`
-      )
-      .join("\n");
+      const waPhone = phone.startsWith("91") ? phone : `91${phone}`;
+      const customerName = order.customer?.name || "Valued Customer";
+      const invoiceNo = order.invoiceNumber || `KAH-WA-${order.orderId}`;
+      const orderDate = new Date(order.orderDate || order.createdAt).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
 
-    const fullAddr =
-      order.customer?.address?.fullAddress ||
-      [
-        order.customer?.address?.door,
-        order.customer?.address?.street,
-        order.customer?.address?.district,
-        order.customer?.address?.state,
-        order.customer?.address?.pincode
-      ]
-        .filter(Boolean)
-        .join(", ") ||
-      "Provided Address";
+      const itemsSummary = (order.items || [])
+        .map(
+          (i, idx) =>
+            `  ${idx + 1}. *${i.name}* (${i.size || "Standard"}) x${i.quantity || 1} - ₹${((i.price || 0) * (i.quantity || 1)).toFixed(0)}`
+        )
+        .join("\n");
 
-    // Direct link for customer to view/download official tax invoice PDF on mobile
-    const invoicePdfLink = `${window.location.origin}/invoice/${order.orderId || order._id}`;
+      const fullAddr =
+        order.customer?.address?.fullAddress ||
+        [
+          order.customer?.address?.door,
+          order.customer?.address?.street,
+          order.customer?.address?.district,
+          order.customer?.address?.state,
+          order.customer?.address?.pincode
+        ]
+          .filter(Boolean)
+          .join(", ") ||
+        "Provided Address";
 
-    const message =
-      `🌿 *KALA AGALYA HERBALS - ORDER INVOICE* 🌿\n\n` +
-      `Hello *${customerName}*! 👋\n` +
-      `Thank you for your order with Kala Agalya Herbals!\n\n` +
-      `📄 *Invoice No:* ${invoiceNo}\n` +
-      `🗓️ *Order Date:* ${orderDate}\n` +
-      `📦 *Items Ordered:*\n${itemsSummary}\n\n` +
-      `💰 *Total Amount:* ₹${(Number(order.totalAmount) || 0).toFixed(0)} (Status: ${order.paymentStatus || "PAID"})\n` +
-      `📍 *Delivery Address:*\n${fullAddr}\n\n` +
-      `📥 *Download Your Official Tax Invoice (PDF):*\n` +
-      `👉 ${invoicePdfLink}\n\n` +
-      `✨ Tap the link above to view or download your official tax invoice anytime.\n` +
-      `Our herbal team is preparing your package with care! 🍃\n\n` +
-      `For queries, reply directly to this chat.\n` +
-      `*Kala Agalya Herbals*`;
+      // Direct secure link for customer to view/download official tax invoice PDF (20-min validity)
+      const invoicePdfLink = shareToken
+        ? `${window.location.origin}/invoice/${order.orderId || order._id}?token=${shareToken}`
+        : `${window.location.origin}/invoice/${order.orderId || order._id}`;
 
-    const encoded = encodeURIComponent(message);
-    const waUrl = `https://wa.me/${waPhone}?text=${encoded}`;
-    window.open(waUrl, "_blank", "noopener,noreferrer");
-    addToast(`Invoice PDF opened & WhatsApp chat launched for ${customerName} 💬`, "success");
+      const message =
+        `🌿 *KALA AGALYA HERBALS - ORDER INVOICE* 🌿\n\n` +
+        `Hello *${customerName}*! 👋\n` +
+        `Thank you for your order with Kala Agalya Herbals!\n\n` +
+        `📄 *Invoice No:* ${invoiceNo}\n` +
+        `🗓️ *Order Date:* ${orderDate}\n` +
+        `📦 *Items Ordered:*\n${itemsSummary}\n\n` +
+        `💰 *Total Amount:* ₹${(Number(order.totalAmount) || 0).toFixed(0)} (Status: ${order.paymentStatus || "PAID"})\n` +
+        `📍 *Delivery Address:*\n${fullAddr}\n\n` +
+        `📥 *Download Your Official Tax Invoice (PDF):*\n` +
+        `👉 ${invoicePdfLink}\n\n` +
+        `🔒 _For your security, this direct invoice download link is active for 20 minutes._\n\n` +
+        `✨ Tap the link above to view or download your official tax invoice.\n` +
+        `Our herbal team is preparing your package with care! 🍃\n\n` +
+        `For queries, reply directly to this chat.\n` +
+        `*Kala Agalya Herbals*`;
+
+      const encoded = encodeURIComponent(message);
+      const waUrl = `https://wa.me/${waPhone}?text=${encoded}`;
+      if (waWin) {
+        waWin.location.href = waUrl;
+      } else {
+        window.open(waUrl, "_blank");
+      }
+      addToast(`WhatsApp chat opened for ${customerName} with secure 20-min invoice link 💬`, "success");
+    } catch (err) {
+      if (waWin) waWin.close();
+      addToast("Failed to initiate WhatsApp message", "error");
+    }
   };
 
   // ── Excel & CSV Exports ──────────────────────────────────────────────────
@@ -907,6 +963,39 @@ export default function AdminWhatsAppOrders() {
           </div>
         </div>
 
+        {/* Batch Action Toolbar */}
+        {selectedOrderIds.length > 0 && (
+          <div className="bg-[#1C1A16] text-white px-5 py-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xl border border-yellow-500/30 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="flex items-center gap-3">
+              <span className="w-7 h-7 rounded-lg bg-yellow-500 text-black font-extrabold flex items-center justify-center text-xs shadow-xs">
+                {selectedOrderIds.length}
+              </span>
+              <span className="font-bold text-xs font-grotesk tracking-wide text-yellow-100">
+                {selectedOrderIds.length} order{selectedOrderIds.length > 1 ? "s" : ""} selected
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handlePrintSelected}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black text-xs font-bold font-grotesk uppercase tracking-wider flex items-center gap-2 shadow-gold active:scale-95 transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                <span>Print All Invoices ({selectedOrderIds.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedOrderIds([])}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold font-grotesk uppercase tracking-wider transition-colors"
+              >
+                Deselect All
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Orders Table */}
         <div className="bg-white rounded-3xl border border-yellow-500/15 shadow-card overflow-hidden">
           {loading ? (
@@ -919,6 +1008,15 @@ export default function AdminWhatsAppOrders() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#FDFBF7] border-b border-yellow-500/15 font-bold font-grotesk text-yellow-900 tracking-wider uppercase text-[11px]">
                   <tr>
+                    <th className="py-3.5 px-3 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={handleToggleSelectAll}
+                        className="w-4 h-4 rounded text-yellow-600 focus:ring-yellow-500 border-gray-300 cursor-pointer accent-yellow-600"
+                        title="Select All"
+                      />
+                    </th>
                     <th className="py-3.5 px-4">Invoice / Order ID</th>
                     <th className="py-3.5 px-4">Customer Name</th>
                     <th className="py-3.5 px-4">Mobile & WhatsApp</th>
@@ -949,8 +1047,24 @@ export default function AdminWhatsAppOrders() {
                       .map((i) => `${i.name} (${i.size || "Std"}) x${i.quantity || 1}`)
                       .join(", ");
 
+                    const isChecked = selectedOrderIds.includes(order._id);
+
                     return (
-                      <tr key={order._id} className="hover:bg-yellow-500/4 transition-colors">
+                      <tr
+                        key={order._id}
+                        className={`transition-colors ${
+                          isChecked ? "bg-yellow-500/8 hover:bg-yellow-500/12" : "hover:bg-yellow-500/4"
+                        }`}
+                      >
+                        {/* 0. Row Checkbox */}
+                        <td className="py-4 px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSelectOrder(order._id)}
+                            className="w-4 h-4 rounded text-yellow-600 focus:ring-yellow-500 border-gray-300 cursor-pointer accent-yellow-600"
+                          />
+                        </td>
                         
                         {/* 1. Invoice & Order ID */}
                         <td className="py-4 px-4 whitespace-nowrap">
