@@ -93,7 +93,7 @@ const whatsappOrderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["Pending", "Packed", "Shipped", "Delivered", "Cancelled"],
+      enum: ["Pending", "Packed", "Shipped", "Delivered", "Cancelled", "Returned"],
       default: "Pending"
     },
     paymentStatus: {
@@ -112,6 +112,58 @@ const whatsappOrderSchema = new mongoose.Schema(
     orderDate: {
       type: Date,
       default: Date.now
+    },
+
+    // Dispatch & Invoice Print/Share Tracking
+    invoiceSent: {
+      type: Boolean,
+      default: false
+    },
+    invoiceSentAt: {
+      type: Date,
+      default: null
+    },
+    isPrinted: {
+      type: Boolean,
+      default: false
+    },
+    printedAt: {
+      type: Date,
+      default: null
+    },
+
+    // Return Order & Refund / Re-Order Management
+    returnDetails: {
+      returnType: {
+        type: String,
+        enum: ["Refund", "Re-Order", "None"],
+        default: "None"
+      },
+      refundAmount: {
+        type: Number,
+        default: 0
+      },
+      refundStatus: {
+        type: String,
+        enum: ["Pending", "Completed", "N/A"],
+        default: "Pending"
+      },
+      reorderNotes: {
+        type: String,
+        default: ""
+      },
+      returnReason: {
+        type: String,
+        default: ""
+      },
+      returnNotes: {
+        type: String,
+        default: ""
+      },
+      returnedAt: {
+        type: Date,
+        default: null
+      }
     }
   },
   {

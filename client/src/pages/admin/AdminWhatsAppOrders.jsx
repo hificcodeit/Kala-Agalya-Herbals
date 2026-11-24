@@ -31,6 +31,23 @@ export default function AdminWhatsAppOrders() {
   const [modalMode, setModalMode] = useState("create"); // 'create' | 'edit'
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [viewTab, setViewTab] = useState("active"); // "active" | "returns"
+  const [printFilter, setPrintFilter] = useState("all"); // "all" | "unprinted" | "printed"
+  const [invoiceFilter, setInvoiceFilter] = useState("all"); // "all" | "sent" | "pending"
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
+
+  // Return modal state
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnTargetOrder, setReturnTargetOrder] = useState(null);
+  const [returnFormData, setReturnFormData] = useState({
+    returnType: "Refund",
+    refundAmount: 0,
+    refundStatus: "Pending",
+    reorderNotes: "",
+    returnReason: "Customer Refused / RTO",
+    returnNotes: ""
+  });
+  const [submittingReturn, setSubmittingReturn] = useState(false);
 
   // Form state for Create / Edit
   const [formData, setFormData] = useState({
@@ -113,6 +130,13 @@ export default function AdminWhatsAppOrders() {
     fetchProducts();
   }, [fetchOrders, fetchProducts]);
 
+  // Global click listener to dismiss any open Actions dropdown menu
+  useEffect(() => {
+    const handleGlobalClick = () => setOpenActionMenuId(null);
+    window.addEventListener("click", handleGlobalClick);
+    return () => window.removeEventListener("click", handleGlobalClick);
+  }, []);
+
   // Clean 10-digit phone
   const clean10Digits = (phone) => {
     if (!phone) return "";
@@ -123,14 +147,34 @@ export default function AdminWhatsAppOrders() {
     return digits;
   };
 
-  // Filtered orders list
+  // Split active orders vs returned orders
+  const activeOrders = useMemo(() => {
+    return orders.filter((o) => o.orderStatus !== "Returned");
+  }, [orders]);
+
+  const returnedOrders = useMemo(() => {
+    return orders.filter((o) => o.orderStatus === "Returned");
+  }, [orders]);
+
+  // Filtered orders list based on current active viewTab (active vs returns) & filters
   const filteredOrders = useMemo(() => {
-    return orders.filter((o) => {
-      // Status filter
-      if (statusFilter !== "all" && o.orderStatus !== statusFilter) {
+    const baseList = viewTab === "returns" ? returnedOrders : activeOrders;
+
+    return baseList.filter((o) => {
+      // Status filter (when in active orders tab)
+      if (viewTab === "active" && statusFilter !== "all" && o.orderStatus !== statusFilter) {
         return false;
       }
-      // Search filter
+
+      // Print filter
+      if (printFilter === "unprinted" && o.isPrinted) return false;
+      if (printFilter === "printed" && !o.isPrinted) return false;
+
+      // WhatsApp Invoice filter
+      if (invoiceFilter === "sent" && !o.invoiceSent) return false;
+      if (invoiceFilter === "pending" && o.invoiceSent) return false;
+
+      // Search query filter
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
 
@@ -152,7 +196,7 @@ export default function AdminWhatsAppOrders() {
         items.includes(q)
       );
     });
-  }, [orders, statusFilter, searchQuery]);
+  }, [viewTab, activeOrders, returnedOrders, statusFilter, printFilter, invoiceFilter, searchQuery]);
 
   // Open Create Order Modal
   const handleOpenCreateModal = () => {
@@ -528,24 +572,82 @@ export default function AdminWhatsAppOrders() {
     );
   };
 
-  const handlePrintSelected = () => {
+  // Fast tracking update (invoiceSent or isPrinted)
+  const handleUpdateTracking = async (orderId, updates) => {
+    try {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch(`${API_URL}/admin/whatsapp-orders/${orderId}/tracking`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(updates)
+      });
+      const data = await res.json();
+      if (data.success && data.order) {
+        setOrders((prev) =>
+          prev.map((o) => (o._id === orderId ? { ...o, ...data.order } : o))
+        );
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder((prev) => ({ ...prev, ...data.order }));
+        }
+      }
+    } catch (err) {
+      console.error("Error updating tracking status:", err);
+    }
+  };
+
+  // Batch update tracking
+  const handleBatchUpdateTracking = async (orderIds, updates) => {
+    try {
+      const token = localStorage.getItem("adminToken");
+      await fetch(`${API_URL}/admin/whatsapp-orders/batch-tracking`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ orderIds, ...updates })
+      });
+      setOrders((prev) =>
+        prev.map((o) => (orderIds.includes(o._id) ? { ...o, ...updates } : o))
+      );
+    } catch (err) {
+      console.error("Error batch updating tracking:", err);
+    }
+  };
+
+  const handlePrintSelected = async () => {
     const selectedOrders = orders.filter((o) => selectedOrderIds.includes(o._id));
     if (selectedOrders.length === 0) {
       addToast("Please select at least one order to print", "error");
       return;
     }
     openBatchInvoices(selectedOrders);
+    await handleBatchUpdateTracking(selectedOrderIds, { isPrinted: true });
     addToast(`Opening batch print view for ${selectedOrders.length} invoice(s)... 🖨️`, "info");
   };
 
-  const handlePrintLabelsSelected = () => {
+  const handlePrintLabelsSelected = async () => {
     const selectedOrders = orders.filter((o) => selectedOrderIds.includes(o._id));
     if (selectedOrders.length === 0) {
       addToast("Please select at least one order to print labels", "error");
       return;
     }
     openShippingLabels(selectedOrders);
+    await handleBatchUpdateTracking(selectedOrderIds, { isPrinted: true });
     addToast(`Opening 152×102mm thermal shipping labels for ${selectedOrders.length} order(s)... 📦`, "info");
+  };
+
+  const handlePrintSingleShippingLabel = async (order) => {
+    openShippingLabels(order);
+    await handleUpdateTracking(order._id, { isPrinted: true });
+  };
+
+  const handlePrintSingleInvoice = async (order) => {
+    openInvoice(order);
+    await handleUpdateTracking(order._id, { isPrinted: true });
   };
 
   // ── WhatsApp Messaging Function with 20-Minute Secure Expiring PDF Link ──
@@ -633,11 +735,158 @@ export default function AdminWhatsAppOrders() {
       } else {
         window.open(waUrl, "_blank");
       }
+
+      // Auto-update tracking: Invoice Sent
+      await handleUpdateTracking(order._id, { invoiceSent: true });
+
       addToast(`WhatsApp chat opened for ${customerName} with secure 20-min invoice link 💬`, "success");
     } catch (err) {
       if (waWin) waWin.close();
       addToast("Failed to initiate WhatsApp message", "error");
     }
+  };
+
+  // ── Return Order Processing Handlers ─────────────────────────────────────
+  const handleOpenReturnModal = (order) => {
+    setReturnTargetOrder(order);
+    const ret = order.returnDetails || {};
+    setReturnFormData({
+      returnType: ret.returnType && ret.returnType !== "None" ? ret.returnType : "Refund",
+      refundAmount: ret.refundAmount !== undefined ? ret.refundAmount : (order.totalAmount || 0),
+      refundStatus: ret.refundStatus || "Pending",
+      reorderNotes: ret.reorderNotes || "",
+      returnReason: ret.returnReason || "Customer Refused / RTO",
+      returnNotes: ret.returnNotes || ""
+    });
+    setIsReturnModalOpen(true);
+  };
+
+  const handleSubmitReturn = async (e) => {
+    e.preventDefault();
+    if (!returnTargetOrder) return;
+    setSubmittingReturn(true);
+    try {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch(`${API_URL}/admin/whatsapp-orders/${returnTargetOrder._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          orderStatus: "Returned",
+          returnDetails: {
+            returnType: returnFormData.returnType,
+            refundAmount: Number(returnFormData.refundAmount) || 0,
+            refundStatus: returnFormData.refundStatus,
+            reorderNotes: returnFormData.reorderNotes,
+            returnReason: returnFormData.returnReason,
+            returnNotes: returnFormData.returnNotes,
+            returnedAt: new Date()
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(
+          `Order marked as Returned with ${returnFormData.returnType === "Refund" ? "Refund" : "Re-Order"} resolution!`,
+          "success"
+        );
+        setIsReturnModalOpen(false);
+        fetchOrders();
+      } else {
+        addToast(data.message || "Failed to update return order", "error");
+      }
+    } catch (err) {
+      console.error("Error submitting return:", err);
+      addToast("Server error saving return details", "error");
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
+
+  // Export Return Orders to Excel
+  const handleExportReturnsExcel = () => {
+    const returnsList = orders.filter((o) => o.orderStatus === "Returned");
+    if (returnsList.length === 0) {
+      addToast("No return orders available to export", "error");
+      return;
+    }
+
+    const rows = returnsList.map((o) => {
+      const itemsStr = (o.items || [])
+        .map((i) => `${i.name} (${i.size || "Std"}) x${i.quantity || 1}`)
+        .join(" | ");
+
+      const addrStr =
+        o.customer?.address?.fullAddress ||
+        [
+          o.customer?.address?.door,
+          o.customer?.address?.street,
+          o.customer?.address?.district,
+          o.customer?.address?.state,
+          o.customer?.address?.pincode
+        ]
+          .filter(Boolean)
+          .join(", ") ||
+        "N/A";
+
+      const ret = o.returnDetails || {};
+      const returnDateStr = ret.returnedAt
+        ? new Date(ret.returnedAt).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
+          })
+        : new Date(o.updatedAt || o.createdAt).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
+          });
+
+      return {
+        "Invoice Number": o.invoiceNumber || `KAH-WA-${o.orderId}`,
+        "Order ID": o.orderId,
+        "Customer Name": o.customer?.name || "N/A",
+        "Mobile Number": o.customer?.mobileNumber || "N/A",
+        "WhatsApp Number": o.customer?.whatsappNumber || o.customer?.mobileNumber || "N/A",
+        "Delivery Address": addrStr,
+        "Returned Items": itemsStr || "Herbal Items",
+        "Original Amount": o.totalAmount || 0,
+        "Return Type": ret.returnType || "Refund",
+        "Refund Amount": ret.returnType === "Refund" ? (ret.refundAmount || o.totalAmount || 0) : 0,
+        "Refund Status": ret.returnType === "Refund" ? (ret.refundStatus || "Pending") : "N/A",
+        "Re-Order Notes": ret.reorderNotes || "N/A",
+        "Return Reason": ret.returnReason || "N/A",
+        "Return Notes": ret.returnNotes || "",
+        "Return Date": returnDateStr
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet["!cols"] = [
+      { wch: 22 },
+      { wch: 14 },
+      { wch: 22 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 35 },
+      { wch: 35 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 25 },
+      { wch: 22 },
+      { wch: 25 },
+      { wch: 15 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "WhatsApp Returns");
+    const todayStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `KAH_WhatsApp_Return_Orders_${todayStr}.xlsx`);
+    addToast(`Exported ${rows.length} return order(s) to Excel (.xlsx) 📊`, "success");
   };
 
   // ── Excel & CSV Exports ──────────────────────────────────────────────────
@@ -813,7 +1062,8 @@ export default function AdminWhatsAppOrders() {
       Packed: "bg-blue-50 text-blue-800 border-blue-200",
       Shipped: "bg-purple-50 text-purple-800 border-purple-200",
       Delivered: "bg-emerald-50 text-emerald-800 border-emerald-200",
-      Cancelled: "bg-red-50 text-red-800 border-red-200"
+      Cancelled: "bg-red-50 text-red-800 border-red-200",
+      Returned: "bg-rose-50 text-rose-800 border-rose-300"
     };
     return badges[status] || "bg-gray-100 text-gray-700 border-gray-200";
   };
@@ -892,46 +1142,114 @@ export default function AdminWhatsAppOrders() {
         </div>
 
         {/* Dashboard Statistics Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-yellow-500/15 shadow-card">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-yellow-500/15 shadow-card">
             <p className="text-[10px] font-bold text-[#9A9690] uppercase tracking-wider font-grotesk">
               Total WA Orders
             </p>
-            <p className="text-2xl font-black text-[#1C1A16] font-soria mt-1">
+            <p className="text-xl sm:text-2xl font-black text-[#1C1A16] font-soria mt-1">
               {stats.totalOrders}
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-yellow-500/15 shadow-card">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-yellow-500/15 shadow-card">
             <p className="text-[10px] font-bold text-[#9A9690] uppercase tracking-wider font-grotesk">
               Total Revenue
             </p>
-            <p className="text-2xl font-black text-yellow-800 font-soria mt-1">
+            <p className="text-xl sm:text-2xl font-black text-yellow-800 font-soria mt-1">
               ₹{stats.totalRevenue.toLocaleString("en-IN")}
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-yellow-500/15 shadow-card">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-yellow-500/15 shadow-card">
             <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider font-grotesk">
               Pending Orders
             </p>
-            <p className="text-2xl font-black text-amber-800 font-soria mt-1">
+            <p className="text-xl sm:text-2xl font-black text-amber-800 font-soria mt-1">
               {stats.pendingOrders}
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-yellow-500/15 shadow-card">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-yellow-500/15 shadow-card">
             <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider font-grotesk">
               Delivered
             </p>
-            <p className="text-2xl font-black text-emerald-700 font-soria mt-1">
+            <p className="text-xl sm:text-2xl font-black text-emerald-700 font-soria mt-1">
               {stats.deliveredOrders}
+            </p>
+          </div>
+
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-rose-500/25 shadow-card">
+            <p className="text-[10px] font-bold text-rose-700 uppercase tracking-wider font-grotesk">
+              Return Orders
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-rose-700 font-soria mt-1">
+              {stats.returnedOrders !== undefined ? stats.returnedOrders : returnedOrders.length}
             </p>
           </div>
         </div>
 
+        {/* View Mode Tabs: Active Orders vs Return Orders */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-yellow-500/20 pb-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setViewTab("active");
+                setSelectedOrderIds([]);
+              }}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-bold font-grotesk uppercase tracking-wider transition-all flex items-center gap-2 ${
+                viewTab === "active"
+                  ? "bg-yellow-900 text-white shadow-md ring-2 ring-yellow-600/30"
+                  : "bg-white text-gray-700 hover:bg-yellow-500/10 border border-yellow-500/20"
+              }`}
+            >
+              <span>📦 Active Orders</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  viewTab === "active" ? "bg-yellow-700 text-white" : "bg-gray-100 text-gray-700"
+                }`}
+              >
+                {activeOrders.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                setViewTab("returns");
+                setSelectedOrderIds([]);
+              }}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-bold font-grotesk uppercase tracking-wider transition-all flex items-center gap-2 ${
+                viewTab === "returns"
+                  ? "bg-rose-900 text-white shadow-md ring-2 ring-rose-600/30"
+                  : "bg-white text-rose-800 hover:bg-rose-50 border border-rose-200"
+              }`}
+            >
+              <span>🔄 Return Orders & Refunds</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  viewTab === "returns" ? "bg-rose-700 text-white" : "bg-rose-100 text-rose-800"
+                }`}
+              >
+                {returnedOrders.length}
+              </span>
+            </button>
+          </div>
+
+          {viewTab === "returns" && (
+            <button
+              onClick={handleExportReturnsExcel}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 font-grotesk uppercase tracking-wider transition-all shadow-xs active:scale-95"
+            >
+              <svg className="w-4 h-4 text-rose-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Export Returns Excel (.xlsx)</span>
+            </button>
+          )}
+        </div>
+
         {/* Search & Filter Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-yellow-500/15 shadow-card flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-yellow-500/15 shadow-card flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           {/* Search Box */}
           <div className="relative flex-1">
             <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -956,22 +1274,59 @@ export default function AdminWhatsAppOrders() {
             )}
           </div>
 
-          {/* Status Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 custom-scrollbar shrink-0">
-            {["all", "Pending", "Packed", "Shipped", "Delivered", "Cancelled"].map((st) => (
-              <button
-                key={st}
-                onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold font-grotesk uppercase tracking-wider transition-all whitespace-nowrap ${
-                  statusFilter === st
-                    ? "bg-yellow-800 text-white shadow-xs"
-                    : "bg-[#FDFBF7] text-[#6C685F] hover:bg-yellow-500/10 border border-yellow-500/15"
-                }`}
-              >
-                {st === "all" ? `All (${orders.length})` : st}
-              </button>
-            ))}
-          </div>
+          {/* Filters Area */}
+          {viewTab === "active" ? (
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Status Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 custom-scrollbar shrink-0">
+                {["all", "Pending", "Packed", "Shipped", "Delivered", "Cancelled"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold font-grotesk uppercase tracking-wider transition-all whitespace-nowrap ${
+                      statusFilter === st
+                        ? "bg-yellow-800 text-white shadow-xs"
+                        : "bg-[#FDFBF7] text-[#6C685F] hover:bg-yellow-500/10 border border-yellow-500/15"
+                    }`}
+                  >
+                    {st === "all" ? `All (${activeOrders.length})` : st}
+                  </button>
+                ))}
+              </div>
+
+              {/* Print Status Filter */}
+              <div className="flex items-center gap-1 text-[11px] font-grotesk border-l border-yellow-500/15 pl-3">
+                <span className="text-[#8A867E] font-bold">Print:</span>
+                <select
+                  value={printFilter}
+                  onChange={(e) => setPrintFilter(e.target.value)}
+                  className="px-2 py-1 text-xs bg-[#FDFBF7] border border-yellow-500/25 rounded-lg focus:outline-none font-bold text-gray-800"
+                >
+                  <option value="all">All</option>
+                  <option value="unprinted">⬜ Unprinted Only</option>
+                  <option value="printed">🖨️ Printed</option>
+                </select>
+              </div>
+
+              {/* WhatsApp Sent Filter */}
+              <div className="flex items-center gap-1 text-[11px] font-grotesk">
+                <span className="text-[#8A867E] font-bold">WhatsApp:</span>
+                <select
+                  value={invoiceFilter}
+                  onChange={(e) => setInvoiceFilter(e.target.value)}
+                  className="px-2 py-1 text-xs bg-[#FDFBF7] border border-yellow-500/25 rounded-lg focus:outline-none font-bold text-gray-800"
+                >
+                  <option value="all">All</option>
+                  <option value="sent">💬 Sent</option>
+                  <option value="pending">⏳ Not Sent</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs font-bold font-grotesk text-rose-800 flex items-center gap-2">
+              <span>Showing {filteredOrders.length} Return Order(s)</span>
+            </div>
+          )}
         </div>
 
         {/* Batch Action Toolbar */}
@@ -1048,11 +1403,23 @@ export default function AdminWhatsAppOrders() {
                     <th className="py-3.5 px-4">Invoice / Order ID</th>
                     <th className="py-3.5 px-4">Customer Name</th>
                     <th className="py-3.5 px-4">Mobile & WhatsApp</th>
-                    <th className="py-3.5 px-4">Address</th>
-                    <th className="py-3.5 px-4">Placed Order</th>
-                    <th className="py-3.5 px-4 text-right">Total Amount</th>
-                    <th className="py-3.5 px-4 text-center">Order Status</th>
-                    <th className="py-3.5 px-4 text-center">Order Date</th>
+                    {viewTab === "active" ? (
+                      <>
+                        <th className="py-3.5 px-4">Address</th>
+                        <th className="py-3.5 px-4">Placed Order</th>
+                        <th className="py-3.5 px-4 text-right">Total Amount</th>
+                        <th className="py-3.5 px-4 text-center">Order Status</th>
+                        <th className="py-3.5 px-4 text-center">Order Date</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="py-3.5 px-4">Returned Items</th>
+                        <th className="py-3.5 px-4 text-right">Order Amount</th>
+                        <th className="py-3.5 px-4 text-center">Return Resolution</th>
+                        <th className="py-3.5 px-4 text-center">Refund Status / Amount</th>
+                        <th className="py-3.5 px-4">Return Reason & Date</th>
+                      </>
+                    )}
                     <th className="py-3.5 px-4 text-center">Actions</th>
                   </tr>
                 </thead>
@@ -1094,13 +1461,46 @@ export default function AdminWhatsAppOrders() {
                           />
                         </td>
                         
-                        {/* 1. Invoice & Order ID */}
+                        {/* 1. Invoice & Order ID + Tracking Badges */}
                         <td className="py-4 px-4 whitespace-nowrap">
                           <div className="font-mono font-bold text-yellow-800 text-xs">
                             {order.invoiceNumber || `#${order.orderId}`}
                           </div>
                           <div className="text-[10px] text-[#8A867E] font-mono mt-0.5">
                             ID: {order.orderId}
+                          </div>
+
+                          {/* Quick Interactive Tracking Badges */}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            {/* Invoice Sent Status */}
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateTracking(order._id, { invoiceSent: !order.invoiceSent })}
+                              title={`Invoice: ${order.invoiceSent ? "Sent to customer" : "Not sent yet"}. Click to toggle.`}
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold font-grotesk uppercase tracking-wider border transition-all ${
+                                order.invoiceSent
+                                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                                  : "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
+                              }`}
+                            >
+                              <span>{order.invoiceSent ? "✓" : "⏳"}</span>
+                              <span>{order.invoiceSent ? "Sent" : "Unsent"}</span>
+                            </button>
+
+                            {/* Label/Invoice Printed Status */}
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateTracking(order._id, { isPrinted: !order.isPrinted })}
+                              title={`Print Status: ${order.isPrinted ? "Printed" : "Not printed yet"}. Click to toggle.`}
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold font-grotesk uppercase tracking-wider border transition-all ${
+                                order.isPrinted
+                                  ? "bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100"
+                                  : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                              }`}
+                            >
+                              <span>{order.isPrinted ? "🖨️" : "⬜"}</span>
+                              <span>{order.isPrinted ? "Printed" : "Unprinted"}</span>
+                            </button>
                           </div>
                         </td>
 
@@ -1128,125 +1528,255 @@ export default function AdminWhatsAppOrders() {
                           </div>
                         </td>
 
-                        {/* 4. Customer Address */}
-                        <td className="py-4 px-4 max-w-[180px]">
-                          <div className="truncate text-xs text-[#4A473E]" title={fullAddr}>
-                            {fullAddr || "—"}
-                          </div>
-                        </td>
+                        {/* View Tab = "active" Columns */}
+                        {viewTab === "active" ? (
+                          <>
+                            {/* 4. Customer Address */}
+                            <td className="py-4 px-4 max-w-[180px]">
+                              <div className="truncate text-xs text-[#4A473E]" title={fullAddr}>
+                                {fullAddr || "—"}
+                              </div>
+                            </td>
 
-                        {/* 5. Placed Order Summary */}
-                        <td className="py-4 px-4 max-w-[200px]">
-                          <div className="truncate font-medium text-xs text-[#1C1A16]" title={itemsDesc}>
-                            {itemsDesc || "Herbal Order"}
-                          </div>
-                          <div className="text-[10px] text-[#8A867E]">
-                            {itemsCount} item{itemsCount !== 1 ? "s" : ""}
-                          </div>
-                        </td>
+                            {/* 5. Placed Order Summary */}
+                            <td className="py-4 px-4 max-w-[200px]">
+                              <div className="truncate font-medium text-xs text-[#1C1A16]" title={itemsDesc}>
+                                {itemsDesc || "Herbal Order"}
+                              </div>
+                              <div className="text-[10px] text-[#8A867E]">
+                                {itemsCount} item{itemsCount !== 1 ? "s" : ""}
+                              </div>
+                            </td>
 
-                        {/* 6. Total Amount */}
-                        <td className="py-4 px-4 text-right whitespace-nowrap">
-                          <div className="font-black text-[#1C1A16] font-soria text-base">
-                            ₹{(Number(order.totalAmount) || 0).toFixed(0)}
-                          </div>
-                          <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider font-grotesk">
-                            {order.paymentStatus || "PAID"}
-                          </span>
-                        </td>
+                            {/* 6. Total Amount */}
+                            <td className="py-4 px-4 text-right whitespace-nowrap">
+                              <div className="font-black text-[#1C1A16] font-soria text-base">
+                                ₹{(Number(order.totalAmount) || 0).toFixed(0)}
+                              </div>
+                              <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider font-grotesk">
+                                {order.paymentStatus || "PAID"}
+                              </span>
+                            </td>
 
-                        {/* 7. Order Status */}
-                        <td className="py-4 px-4 text-center whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold font-grotesk uppercase tracking-wider border ${getStatusBadge(
-                              order.orderStatus
-                            )}`}
-                          >
-                            {order.orderStatus}
-                          </span>
-                        </td>
+                            {/* 7. Order Status */}
+                            <td className="py-4 px-4 text-center whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold font-grotesk uppercase tracking-wider border ${getStatusBadge(
+                                  order.orderStatus
+                                )}`}
+                              >
+                                {order.orderStatus}
+                              </span>
+                            </td>
 
-                        {/* 8. Order Date */}
-                        <td className="py-4 px-4 text-center whitespace-nowrap text-xs text-[#8A867E]">
-                          <div>
-                            {new Date(order.orderDate || order.createdAt).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric"
-                            })}
-                          </div>
-                        </td>
+                            {/* 8. Order Date */}
+                            <td className="py-4 px-4 text-center whitespace-nowrap text-xs text-[#8A867E]">
+                              <div>
+                                {new Date(order.orderDate || order.createdAt).toLocaleDateString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric"
+                                })}
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          /* View Tab = "returns" Columns */
+                          <>
+                            {/* Returned Items */}
+                            <td className="py-4 px-4 max-w-[180px]">
+                              <div className="truncate font-medium text-xs text-[#1C1A16]" title={itemsDesc}>
+                                {itemsDesc || "Herbal Products"}
+                              </div>
+                              <div className="text-[10px] text-rose-800 font-bold">
+                                {itemsCount} item{itemsCount !== 1 ? "s" : ""} returned
+                              </div>
+                            </td>
 
-                        {/* 9. Actions Column */}
-                        <td className="py-4 px-4 whitespace-nowrap text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            
-                            {/* WhatsApp Direct Share Button */}
+                            {/* Original Order Total */}
+                            <td className="py-4 px-4 text-right whitespace-nowrap">
+                              <div className="font-black text-[#1C1A16] font-soria text-base">
+                                ₹{(Number(order.totalAmount) || 0).toFixed(0)}
+                              </div>
+                            </td>
+
+                            {/* Return Type (Refund vs Re-order) */}
+                            <td className="py-4 px-4 text-center whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold font-grotesk uppercase tracking-wider border ${
+                                  (order.returnDetails?.returnType || "Refund") === "Re-Order"
+                                    ? "bg-purple-50 text-purple-800 border-purple-200"
+                                    : "bg-rose-50 text-rose-800 border-rose-200"
+                                }`}
+                              >
+                                <span>{(order.returnDetails?.returnType || "Refund") === "Re-Order" ? "🔁 Re-Order" : "💰 Refund"}</span>
+                              </span>
+                            </td>
+
+                            {/* Refund Details */}
+                            <td className="py-4 px-4 text-center whitespace-nowrap">
+                              {(order.returnDetails?.returnType || "Refund") === "Re-Order" ? (
+                                <div className="text-xs text-purple-900 font-medium max-w-[140px] truncate" title={order.returnDetails?.reorderNotes}>
+                                  {order.returnDetails?.reorderNotes || "Replacement order"}
+                                </div>
+                              ) : (
+                                <div>
+                                  <div className="font-soria font-bold text-sm text-rose-900">
+                                    ₹{order.returnDetails?.refundAmount !== undefined ? order.returnDetails.refundAmount : (order.totalAmount || 0)}
+                                  </div>
+                                  <span
+                                    className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold font-grotesk uppercase ${
+                                      order.returnDetails?.refundStatus === "Completed"
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-amber-100 text-amber-800"
+                                    }`}
+                                  >
+                                    {order.returnDetails?.refundStatus || "Pending"}
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Return Reason & Date */}
+                            <td className="py-4 px-4 max-w-[160px]">
+                              <div className="font-bold text-xs text-rose-900 truncate" title={order.returnDetails?.returnReason}>
+                                {order.returnDetails?.returnReason || "Customer Return"}
+                              </div>
+                              <div className="text-[10px] text-[#8A867E] mt-0.5">
+                                {order.returnDetails?.returnedAt
+                                  ? new Date(order.returnDetails.returnedAt).toLocaleDateString("en-IN", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric"
+                                    })
+                                  : new Date(order.updatedAt || order.createdAt).toLocaleDateString("en-IN", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric"
+                                    })}
+                              </div>
+                            </td>
+                          </>
+                        )}
+
+                        {/* 9. Actions Column - Unified Common Dropdown Button */}
+                        <td className="py-4 px-4 whitespace-nowrap text-center relative">
+                          <div className="relative inline-block text-left">
                             <button
-                              onClick={() => handleSendWhatsAppMessage(order)}
-                              title="Open WhatsApp with Pre-filled Invoice & Order Details"
-                              className="w-8 h-8 rounded-xl bg-green-50 text-emerald-700 hover:bg-green-100 hover:text-green-800 border border-green-200 flex items-center justify-center transition-all active:scale-95"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenActionMenuId(openActionMenuId === order._id ? null : order._id);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FDFBF7] hover:bg-yellow-500/15 text-yellow-900 border border-yellow-500/30 font-bold font-grotesk text-xs uppercase tracking-wider transition-all shadow-2xs active:scale-95"
                             >
-                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                              <span>Actions</span>
+                              <svg className="w-3.5 h-3.5 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                               </svg>
                             </button>
 
-                            {/* View Details Button */}
-                            <button
-                              onClick={() => handleOpenViewModal(order)}
-                              title="View Full Order Details"
-                              className="px-2.5 py-1.5 bg-[#FDFBF7] text-yellow-900 border border-yellow-500/25 rounded-xl hover:bg-yellow-500/15 font-bold text-[10px] font-grotesk uppercase tracking-wider transition-all"
-                            >
-                              View
-                            </button>
+                            {openActionMenuId === order._id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 mt-1.5 w-56 bg-white rounded-2xl shadow-2xl border border-yellow-500/20 py-2 z-50 text-left font-inter animate-in fade-in zoom-in-95 duration-150"
+                              >
+                                {/* WhatsApp message */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    handleSendWhatsAppMessage(order);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-800 flex items-center gap-2.5 transition-colors font-medium text-left"
+                                >
+                                  <span className="text-emerald-600 text-sm">💬</span>
+                                  <span>Send on WhatsApp</span>
+                                </button>
 
-                            {/* Invoice Preview / Download PDF */}
-                            <button
-                              onClick={() => openInvoice(order)}
-                              title="Preview / Print Tax Invoice PDF"
-                              className="px-2.5 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl font-bold text-[10px] font-grotesk uppercase tracking-wider shadow-xs transition-all flex items-center gap-1"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                              <span>Invoice</span>
-                            </button>
+                                {/* Print Shipping Label */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    handlePrintSingleShippingLabel(order);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-teal-50 hover:text-teal-800 flex items-center gap-2.5 transition-colors font-medium text-left"
+                                >
+                                  <span className="text-teal-600 text-sm">📦</span>
+                                  <span>Print Label (152×102)</span>
+                                </button>
 
-                            {/* Thermal Shipping Label (152x102mm) */}
-                            <button
-                              onClick={() => openShippingLabels(order)}
-                              title="Print 152×102mm Thermal Shipping Label"
-                              className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-[10px] font-grotesk uppercase tracking-wider shadow-xs transition-all flex items-center gap-1"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                              </svg>
-                              <span>Label</span>
-                            </button>
+                                {/* Print Tax Invoice */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    handlePrintSingleInvoice(order);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-yellow-500/10 hover:text-yellow-900 flex items-center gap-2.5 transition-colors font-medium text-left"
+                                >
+                                  <span className="text-yellow-700 text-sm">🧾</span>
+                                  <span>Print Tax Invoice (A4)</span>
+                                </button>
 
-                            {/* Edit Button */}
-                            <button
-                              onClick={() => handleOpenEditModal(order)}
-                              title="Edit Order"
-                              className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-all"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
+                                <div className="border-t border-gray-100 my-1"></div>
 
-                            {/* Delete Button */}
-                            <button
-                              onClick={() => handleOpenDeleteModal(order)}
-                              title="Delete Order"
-                              className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition-all"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                                {/* View Details */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    handleOpenViewModal(order);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors font-medium text-left"
+                                >
+                                  <span className="text-gray-500 text-sm">👁️</span>
+                                  <span>View Order Details</span>
+                                </button>
 
+                                {/* Process Return / Refund / Re-Order */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    handleOpenReturnModal(order);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs text-rose-800 hover:bg-rose-50 flex items-center gap-2.5 transition-colors font-medium text-left"
+                                >
+                                  <span className="text-rose-600 text-sm">🔄</span>
+                                  <span>{order.orderStatus === "Returned" ? "Edit Return / Refund" : "Process Return / Refund"}</span>
+                                </button>
+
+                                {/* Edit Order */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    handleOpenEditModal(order);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors font-medium text-left"
+                                >
+                                  <span className="text-blue-500 text-sm">✏️</span>
+                                  <span>Edit Order</span>
+                                </button>
+
+                                <div className="border-t border-gray-100 my-1"></div>
+
+                                {/* Delete Order */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    handleOpenDeleteModal(order);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors font-medium text-left"
+                                >
+                                  <span className="text-red-500 text-sm">🗑️</span>
+                                  <span>Delete Order</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1791,12 +2321,73 @@ export default function AdminWhatsAppOrders() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                  {/* Return Summary Box if Returned */}
+                  {selectedOrder.orderStatus === "Returned" && selectedOrder.returnDetails && (
+                    <div className="bg-rose-50/80 border border-rose-200/80 rounded-2xl p-3.5 space-y-2 mt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-rose-900 uppercase tracking-wider font-grotesk flex items-center gap-1.5">
+                          <span>🔄</span> Return Resolution Details
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-grotesk uppercase tracking-wider ${
+                            selectedOrder.returnDetails.returnType === "Refund"
+                              ? selectedOrder.returnDetails.refundStatus === "Completed"
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                : "bg-amber-100 text-amber-800 border border-amber-300"
+                              : "bg-blue-100 text-blue-800 border border-blue-300"
+                          }`}
+                        >
+                          {selectedOrder.returnDetails.returnType === "Refund"
+                            ? `Refund ${selectedOrder.returnDetails.refundStatus || "Pending"}`
+                            : "Re-Order / Replacement"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs pt-1">
+                        <div>
+                          <span className="text-[10px] text-gray-500 uppercase font-grotesk block">Resolution</span>
+                          <span className="font-bold text-gray-900 font-inter">
+                            {selectedOrder.returnDetails.returnType || "Refund"}
+                          </span>
+                        </div>
+                        {selectedOrder.returnDetails.returnType === "Refund" && (
+                          <div>
+                            <span className="text-[10px] text-gray-500 uppercase font-grotesk block">Refund Amount</span>
+                            <span className="font-mono font-bold text-rose-800">
+                              ₹{selectedOrder.returnDetails.refundAmount || 0}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-[10px] text-gray-500 uppercase font-grotesk block">Reason</span>
+                          <span className="text-gray-800 font-inter">
+                            {selectedOrder.returnDetails.returnReason || "Customer Refused / RTO"}
+                          </span>
+                        </div>
+                      </div>
+                      {selectedOrder.returnDetails.reorderNotes && (
+                        <div className="pt-1.5 border-t border-rose-200/60">
+                          <span className="text-[10px] text-gray-500 uppercase font-grotesk block">
+                            Re-Order / Replacement Notes
+                          </span>
+                          <p className="text-xs text-blue-900 font-inter">{selectedOrder.returnDetails.reorderNotes}</p>
+                        </div>
+                      )}
+                      {selectedOrder.returnDetails.returnNotes && (
+                        <div className="pt-1.5 border-t border-rose-200/60">
+                          <span className="text-[10px] text-gray-500 uppercase font-grotesk block">Admin Notes</span>
+                          <p className="text-xs text-gray-700 font-inter">{selectedOrder.returnDetails.returnNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 pt-1">
                     {[
                       { status: "Pending", icon: "⏳", color: "hover:border-amber-400 hover:bg-amber-50" },
                       { status: "Packed", icon: "📦", color: "hover:border-blue-400 hover:bg-blue-50" },
                       { status: "Shipped", icon: "🚚", color: "hover:border-purple-400 hover:bg-purple-50" },
                       { status: "Delivered", icon: "✅", color: "hover:border-emerald-400 hover:bg-emerald-50" },
+                      { status: "Returned", icon: "🔄", color: "hover:border-rose-400 hover:bg-rose-50" },
                       { status: "Cancelled", icon: "🚫", color: "hover:border-red-400 hover:bg-red-50" }
                     ].map(({ status, icon, color }) => {
                       const isCurrent = selectedOrder.orderStatus === status;
@@ -1805,7 +2396,13 @@ export default function AdminWhatsAppOrders() {
                           key={status}
                           type="button"
                           disabled={updatingStatus || isCurrent}
-                          onClick={() => handleUpdateStatus(selectedOrder._id, status)}
+                          onClick={() => {
+                            if (status === "Returned") {
+                              handleOpenReturnModal(selectedOrder);
+                            } else {
+                              handleUpdateStatus(selectedOrder._id, status);
+                            }
+                          }}
                           className={`py-2 px-2 rounded-xl text-xs font-bold font-grotesk uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-xs border ${
                             isCurrent
                               ? "bg-yellow-800 text-white border-yellow-800 shadow-sm ring-2 ring-yellow-600/30 cursor-default"
@@ -1867,6 +2464,202 @@ export default function AdminWhatsAppOrders() {
                   Yes, Delete Order
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── RETURN / REFUND PROCESSING MODAL ────────────────────────────── */}
+        {isReturnModalOpen && returnTargetOrder && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl border border-rose-200 w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              
+              {/* Header */}
+              <div className="px-6 py-5 bg-gradient-to-r from-rose-50 to-orange-50 border-b border-rose-200/80 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-md">
+                    <span className="text-lg">🔄</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-rose-800 font-bold tracking-widest uppercase font-grotesk">
+                      Return Order & Resolution
+                    </span>
+                    <h3 className="text-lg font-black text-[#1C1A16] font-soria">
+                      Invoice #{returnTargetOrder.invoiceNumber || returnTargetOrder.orderId}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsReturnModalOpen(false)}
+                  className="w-9 h-9 rounded-xl bg-white hover:bg-rose-100 text-gray-500 hover:text-rose-700 flex items-center justify-center transition-colors shadow-xs"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSubmitReturn} className="p-6 space-y-5 font-inter text-xs">
+                
+                {/* Customer summary */}
+                <div className="bg-[#FDFBF7] p-3.5 rounded-2xl border border-yellow-500/15 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-gray-500 font-bold uppercase font-grotesk block">Customer</span>
+                    <span className="font-bold text-gray-900 text-sm">{returnTargetOrder.customer?.name}</span>
+                    <span className="text-gray-500 text-[11px] block">{returnTargetOrder.customer?.mobileNumber}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-gray-500 font-bold uppercase font-grotesk block">Order Value</span>
+                    <span className="font-soria text-lg font-black text-yellow-900">₹{returnTargetOrder.totalAmount || 0}</span>
+                  </div>
+                </div>
+
+                {/* Resolution Type: Refund vs Re-Order */}
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase font-grotesk mb-2">
+                    Resolution Type *
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setReturnFormData({ ...returnFormData, returnType: "Refund" })}
+                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-start gap-3 ${
+                        returnFormData.returnType === "Refund"
+                          ? "bg-rose-50 border-rose-500 text-rose-950 ring-2 ring-rose-400/20 shadow-xs"
+                          : "bg-white border-gray-200 text-gray-700 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="text-xl">💰</span>
+                      <div>
+                        <span className="font-bold font-grotesk text-xs block">Refund Money</span>
+                        <span className="text-[11px] text-gray-500 block mt-0.5">Pay customer refund money for return</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setReturnFormData({ ...returnFormData, returnType: "Re-Order" })}
+                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-start gap-3 ${
+                        returnFormData.returnType === "Re-Order"
+                          ? "bg-blue-50 border-blue-500 text-blue-950 ring-2 ring-blue-400/20 shadow-xs"
+                          : "bg-white border-gray-200 text-gray-700 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="text-xl">🔁</span>
+                      <div>
+                        <span className="font-bold font-grotesk text-xs block">Re-Order / Replacement</span>
+                        <span className="text-[11px] text-gray-500 block mt-0.5">Ship replacement or reschedule order</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Conditional Resolution Fields */}
+                {returnFormData.returnType === "Refund" ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-rose-50/50 p-4 rounded-2xl border border-rose-100">
+                    <div>
+                      <label className="block text-[11px] font-bold text-rose-900 uppercase font-grotesk mb-1">
+                        Refund Amount (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={returnFormData.refundAmount}
+                        onChange={(e) => setReturnFormData({ ...returnFormData, refundAmount: e.target.value })}
+                        className="w-full px-3 py-2 text-xs bg-white border border-rose-200 rounded-xl font-mono font-bold text-rose-900 focus:outline-hidden focus:border-rose-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-rose-900 uppercase font-grotesk mb-1">
+                        Refund Status *
+                      </label>
+                      <select
+                        value={returnFormData.refundStatus}
+                        onChange={(e) => setReturnFormData({ ...returnFormData, refundStatus: e.target.value })}
+                        className="w-full px-3 py-2 text-xs bg-white border border-rose-200 rounded-xl font-grotesk font-bold text-gray-800 focus:outline-hidden focus:border-rose-500"
+                      >
+                        <option value="Pending">⏳ Pending Refund</option>
+                        <option value="Completed">✅ Refund Completed / Paid</option>
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-1">
+                    <label className="block text-[11px] font-bold text-blue-900 uppercase font-grotesk mb-1">
+                      Replacement / Re-Order Notes
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={returnFormData.reorderNotes}
+                      onChange={(e) => setReturnFormData({ ...returnFormData, reorderNotes: e.target.value })}
+                      placeholder="e.g. Reshipping 100ml hair oil tomorrow via courier with revised address..."
+                      className="w-full px-3 py-2 text-xs bg-white border border-blue-200 rounded-xl font-inter text-gray-800 focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                {/* Return Reason */}
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase font-grotesk mb-1">
+                    Reason for Return / RTO *
+                  </label>
+                  <select
+                    value={returnFormData.returnReason}
+                    onChange={(e) => setReturnFormData({ ...returnFormData, returnReason: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl font-grotesk font-medium text-gray-800 focus:outline-hidden focus:border-yellow-500"
+                  >
+                    <option value="Customer Refused / RTO">Customer Refused / RTO at Doorstep</option>
+                    <option value="Address Not Found / Undelivered">Address Not Found / Undelivered Courier</option>
+                    <option value="Customer Cancelled After Dispatch">Customer Cancelled After Dispatch</option>
+                    <option value="Damaged in Transit / Defective">Damaged in Transit / Defective Item</option>
+                    <option value="Wrong Item Dispatched">Wrong Item Dispatched</option>
+                    <option value="Other Reason">Other Reason</option>
+                  </select>
+                </div>
+
+                {/* Additional Notes */}
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase font-grotesk mb-1">
+                    Return Notes & Remarks (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={returnFormData.returnNotes}
+                    onChange={(e) => setReturnFormData({ ...returnFormData, returnNotes: e.target.value })}
+                    placeholder="Enter any additional remarks, transaction ID, or courier return tracking number..."
+                    className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl font-inter text-gray-800 focus:outline-hidden focus:border-yellow-500"
+                  />
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsReturnModalOpen(false)}
+                    className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-100 font-bold font-grotesk text-xs uppercase tracking-wider transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingReturn}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold font-grotesk text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {submittingReturn ? (
+                      <>
+                        <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Saving Return...
+                      </>
+                    ) : (
+                      "Save Return & Resolution"
+                    )}
+                  </button>
+                </div>
+
+              </form>
             </div>
           </div>
         )}

@@ -9,8 +9,14 @@ router.use(adminAuth);
 // Bulk import endpoint (before :id parameter to avoid collision)
 router.post("/bulk-import", whatsappOrderController.bulkImportWhatsAppOrders);
 
+// Batch tracking update endpoint (before :id parameter)
+router.post("/batch-tracking", whatsappOrderController.batchUpdateTracking);
+
 // 20-minute timed share token for WhatsApp
 router.get("/:id/share-token", whatsappOrderController.getInvoiceShareToken);
+
+// Single order tracking update
+router.patch("/:id/tracking", whatsappOrderController.updateTrackingStatus);
 
 // Standard CRUD
 router.get("/", whatsappOrderController.getAllWhatsAppOrders);

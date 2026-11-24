@@ -94,7 +94,10 @@ exports.getAllWhatsAppOrders = async (req, res) => {
       totalRevenue: allOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0),
       pendingOrders: allOrders.filter((o) => o.orderStatus === "Pending").length,
       deliveredOrders: allOrders.filter((o) => o.orderStatus === "Delivered").length,
-      shippedOrders: allOrders.filter((o) => o.orderStatus === "Shipped").length
+      shippedOrders: allOrders.filter((o) => o.orderStatus === "Shipped").length,
+      returnedOrders: allOrders.filter((o) => o.orderStatus === "Returned").length,
+      unprintedOrders: allOrders.filter((o) => !o.isPrinted && o.orderStatus !== "Cancelled" && o.orderStatus !== "Returned").length,
+      unsentInvoices: allOrders.filter((o) => !o.invoiceSent && o.orderStatus !== "Cancelled").length
     };
 
     res.json({
@@ -270,7 +273,10 @@ exports.updateWhatsAppOrder = async (req, res) => {
       invoiceNumber,
       invoiceStatus,
       notes,
-      orderDate
+      orderDate,
+      invoiceSent,
+      isPrinted,
+      returnDetails
     } = req.body;
 
     const existingOrder = await WhatsAppOrder.findById(id);
@@ -347,12 +353,37 @@ exports.updateWhatsAppOrder = async (req, res) => {
         existingOrder.items.reduce((acc, curr) => acc + curr.total, 0) + existingOrder.shippingAmount;
     }
 
-    if (orderStatus) existingOrder.orderStatus = orderStatus;
+    if (orderStatus) {
+      existingOrder.orderStatus = orderStatus;
+      if (orderStatus === "Returned") {
+        if (!existingOrder.returnDetails) existingOrder.returnDetails = {};
+        if (!existingOrder.returnDetails.returnedAt) existingOrder.returnDetails.returnedAt = new Date();
+      }
+    }
     if (paymentStatus) existingOrder.paymentStatus = paymentStatus;
     if (paymentMethod) existingOrder.paymentMethod = paymentMethod;
     if (invoiceStatus) existingOrder.invoiceStatus = invoiceStatus;
     if (notes !== undefined) existingOrder.notes = notes ? notes.trim() : "";
     if (orderDate) existingOrder.orderDate = new Date(orderDate);
+
+    if (invoiceSent !== undefined) {
+      existingOrder.invoiceSent = Boolean(invoiceSent);
+      existingOrder.invoiceSentAt = invoiceSent ? new Date() : null;
+      if (invoiceSent) existingOrder.invoiceStatus = "SENT";
+    }
+
+    if (isPrinted !== undefined) {
+      existingOrder.isPrinted = Boolean(isPrinted);
+      existingOrder.printedAt = isPrinted ? new Date() : null;
+    }
+
+    if (returnDetails) {
+      existingOrder.returnDetails = {
+        ...(existingOrder.returnDetails ? existingOrder.returnDetails.toObject?.() || existingOrder.returnDetails : {}),
+        ...returnDetails,
+        returnedAt: returnDetails.returnedAt ? new Date(returnDetails.returnedAt) : existingOrder.returnDetails?.returnedAt || new Date()
+      };
+    }
 
     await existingOrder.save();
 
@@ -646,4 +677,96 @@ exports.getInvoiceShareToken = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+// 8. Update Single Order Tracking Status (Invoice Sent / Printed / Return Details)
+exports.updateTrackingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { invoiceSent, isPrinted, returnDetails, orderStatus } = req.body;
+
+    let order;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      order = await WhatsAppOrder.findById(id);
+    }
+    if (!order) {
+      order = (await WhatsAppOrder.findOne({ orderId: id })) || (await WhatsAppOrder.findOne({ invoiceNumber: id }));
+    }
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (invoiceSent !== undefined) {
+      order.invoiceSent = Boolean(invoiceSent);
+      order.invoiceSentAt = invoiceSent ? new Date() : null;
+      if (invoiceSent) order.invoiceStatus = "SENT";
+    }
+
+    if (isPrinted !== undefined) {
+      order.isPrinted = Boolean(isPrinted);
+      order.printedAt = isPrinted ? new Date() : null;
+    }
+
+    if (orderStatus) {
+      order.orderStatus = orderStatus;
+    }
+
+    if (returnDetails) {
+      order.returnDetails = {
+        ...(order.returnDetails ? order.returnDetails.toObject?.() || order.returnDetails : {}),
+        ...returnDetails,
+        returnedAt: returnDetails.returnedAt ? new Date(returnDetails.returnedAt) : order.returnDetails?.returnedAt || new Date()
+      };
+      if (order.orderStatus !== "Returned") {
+        order.orderStatus = "Returned";
+      }
+    }
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: "Order tracking updated successfully",
+      order
+    });
+  } catch (error) {
+    console.error("Error updating tracking status:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// 9. Batch Update Tracking Status (e.g. mark multiple orders as printed)
+exports.batchUpdateTracking = async (req, res) => {
+  try {
+    const { orderIds, isPrinted, invoiceSent } = req.body;
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No order IDs provided" });
+    }
+
+    const updateFields = {};
+    if (isPrinted !== undefined) {
+      updateFields.isPrinted = Boolean(isPrinted);
+      updateFields.printedAt = isPrinted ? new Date() : null;
+    }
+    if (invoiceSent !== undefined) {
+      updateFields.invoiceSent = Boolean(invoiceSent);
+      updateFields.invoiceSentAt = invoiceSent ? new Date() : null;
+      if (invoiceSent) updateFields.invoiceStatus = "SENT";
+    }
+
+    await WhatsAppOrder.updateMany(
+      { _id: { $in: orderIds } },
+      { $set: updateFields }
+    );
+
+    res.json({
+      success: true,
+      message: `Updated tracking for ${orderIds.length} order(s)`
+    });
+  } catch (error) {
+    console.error("Error batch updating tracking:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
 
