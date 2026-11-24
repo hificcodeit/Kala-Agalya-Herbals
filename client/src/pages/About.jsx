@@ -70,7 +70,7 @@ function StatCounter({ value, label }) {
 
   return (
     <div ref={ref} className="py-5 px-3 text-center group">
-      <div className="text-2xl sm:text-3xl font-black text-yellow-600 font-soria tabular-nums group-hover:scale-110 transition-transform duration-300">
+      <div className="text-2xl sm:text-3xl font-black text-yellow-600 font-soria tabular-nums group-hover:scale-110 transition-transform duration-300 notranslate" translate="no">
         {prefix}{formattedCount}{cleanSuffix}
       </div>
       <div className="text-xs sm:text-sm text-[#6C685F] mt-1 font-inter">{label}</div>

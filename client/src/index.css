@@ -448,6 +448,34 @@ body {
   box-shadow: none !important;
 }
 
+/* Ensure font elements injected by Google Translate don't disrupt flex/grid layout flow */
+font, font > font {
+  display: inline !important;
+}
+
+/* Strict enforcement for untranslated elements (icons, ratings, badges, brands) */
+.notranslate,
+[translate="no"] {
+  -webkit-translate: no !important;
+  translate: no !important;
+}
+
+/* Multilingual Typography & Overflow Protections for Indic Languages */
+:lang(ml), :lang(ta), :lang(te), :lang(kn), :lang(hi), :lang(bn), [data-lang]:not([data-lang="en"]) {
+  /* Relax line-height so Indic ligatures/subscripts don't overlap vertically */
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+:lang(ml) h1, :lang(ta) h1, :lang(te) h1, :lang(kn) h1, :lang(hi) h1,
+[data-lang]:not([data-lang="en"]) h1 {
+  line-height: 1.2 !important;
+  letter-spacing: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
 /* Utility to hide horizontal scrollbar on pills */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

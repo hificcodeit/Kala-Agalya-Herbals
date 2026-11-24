@@ -266,31 +266,38 @@ function ReviewCard({ review, badgeText, onImageClick }) {
               loading="lazy"
               onError={e => { e.currentTarget.style.display = 'none'; }}
             />
-            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold font-grotesk gap-1 rounded-2xl backdrop-blur-xs">
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold font-grotesk gap-1 rounded-2xl backdrop-blur-xs notranslate" translate="no">
               🔍 Click to Zoom Photo
             </div>
           </div>
         )}
         <div className="flex items-center justify-between gap-1 mb-3">
-          <div className="flex items-center gap-1 text-yellow-500 text-sm">
+          <div className="flex items-center gap-1 text-yellow-500 text-sm notranslate" translate="no">
             {Array.from({ length: 5 }).map((_, idx) => (
-              <span key={idx}>{idx < (review.rating || 5) ? "★" : "☆"}</span>
+              <svg
+                key={idx}
+                className={`w-3.5 h-3.5 fill-current ${idx < (review.rating || 5) ? "text-yellow-500" : "text-gray-300"}`}
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
             ))}
-            <span className="ml-1 text-xs text-[#9A9690] font-inter font-semibold">({review.rating || 5}.0)</span>
+            <span className="ml-1 text-xs text-[#9A9690] font-inter font-semibold notranslate" translate="no">({review.rating || 5}.0)</span>
           </div>
           {badgeText && (
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-grotesk uppercase border ${isDandruff ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-amber-50 text-amber-800 border-amber-300"}`}>
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-grotesk uppercase border notranslate ${isDandruff ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-amber-50 text-amber-800 border-amber-300"}`} translate="no">
               {badgeText}
             </span>
           )}
         </div>
-        <p className="text-[#4A473E] text-sm leading-relaxed line-clamp-4 font-inter mb-4">
+        <p className="text-[#4A473E] text-sm leading-relaxed line-clamp-4 font-inter mb-4 break-words [overflow-wrap:anywhere]">
           &ldquo;{review.comment}&rdquo;
         </p>
       </div>
       <div className="pt-4 border-t border-yellow-500/10 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center font-grotesk shadow-sm ${isDandruff ? "bg-gradient-to-br from-emerald-600 to-teal-800" : "bg-gradient-to-br from-yellow-600 to-amber-700"}`}>
+          <div className={`w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center font-grotesk shadow-sm notranslate ${isDandruff ? "bg-gradient-to-br from-emerald-600 to-teal-800" : "bg-gradient-to-br from-yellow-600 to-amber-700"}`} translate="no">
             {review.name ? review.name[0].toUpperCase() : "U"}
           </div>
           <div>
@@ -299,7 +306,7 @@ function ReviewCard({ review, badgeText, onImageClick }) {
           </div>
         </div>
         {review.createdAt && (
-          <span className="text-[10px] text-[#9A9690] font-inter">
+          <span className="text-[10px] text-[#9A9690] font-inter notranslate" translate="no">
             {new Date(review.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
           </span>
         )}
@@ -671,7 +678,7 @@ function StatCounter({ value, label }) {
 
   return (
     <div ref={ref} className="text-center group py-4 px-2">
-      <div className="text-3xl md:text-4xl font-black text-yellow-600 font-soria tabular-nums group-hover:scale-110 transition-transform duration-300">
+      <div className="text-3xl md:text-4xl font-black text-yellow-600 font-soria tabular-nums group-hover:scale-110 transition-transform duration-300 notranslate" translate="no">
         {prefix}{formattedCount}{cleanSuffix}
       </div>
       <div className="text-[#6C685F] text-sm mt-1 font-inter">{label}</div>
@@ -703,12 +710,12 @@ function ProductCard({ product, index, onAddToCart, onBuyNow }) {
     >
       {/* Badges */}
       {product.savings && (
-        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-gradient-to-r from-red-500 to-orange-500 text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold z-20 shadow-lg font-grotesk tracking-wide">
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-gradient-to-r from-red-500 to-orange-500 text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold z-20 shadow-lg font-grotesk tracking-wide notranslate" translate="no">
           {product.savings}
         </div>
       )}
       {product.ml === "200 ml" && (
-        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-yellow-500 text-black px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold z-20 shadow-md font-grotesk">
+        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-yellow-500 text-black px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold z-20 shadow-md font-grotesk notranslate" translate="no">
           ★ Popular
         </div>
       )}
@@ -1064,55 +1071,61 @@ export default function Landing() {
         <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[100px] animate-blob animation-delay-2000 pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 w-[300px] h-[300px] bg-lime-500/4 rounded-full blur-[80px] animate-blob animation-delay-4000 pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 xl:gap-20 items-center py-20 relative z-10">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 xl:gap-14 items-center py-16 sm:py-20 relative z-10">
 
           {/* Text column */}
-          <div className="relative min-h-[440px] flex items-center">
-            {heroSlides.map((slide, i) => (
-              <div
-                key={i}
-                className={`absolute inset-0 flex flex-col justify-center transition-all duration-1000 ease-spring ${
-                  i === currentSlide ? "opacity-100 translate-x-0 scale-100" : i < currentSlide ? "opacity-0 -translate-x-8 scale-95" : "opacity-0 translate-x-8 scale-95"
-                }`}
-                aria-hidden={i !== currentSlide}
-              >
-                <span className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full text-yellow-800 mb-6 w-fit font-grotesk">
-                  {slide.badge}
-                </span>
-                <h1 className="text-5xl md:text-6xl xl:text-7xl font-extrabold leading-[1.08] mb-5 text-[#1C1A16] font-soria">
-                  {slide.title}<br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 via-amber-600 to-yellow-700 bg-[length:200%_auto] animate-gradient-x">
-                    {slide.highlight}
+          <div className="lg:col-span-7 min-w-0 z-20">
+            <div className="grid grid-cols-1 items-center min-h-[460px] sm:min-h-[500px]">
+              {heroSlides.map((slide, i) => (
+                <div
+                  key={i}
+                  className={`col-start-1 row-start-1 flex flex-col justify-center min-w-0 transition-all duration-1000 ease-spring ${
+                    i === currentSlide
+                      ? "opacity-100 translate-x-0 scale-100 pointer-events-auto z-10"
+                      : i < currentSlide
+                      ? "opacity-0 -translate-x-8 scale-95 pointer-events-none invisible"
+                      : "opacity-0 translate-x-8 scale-95 pointer-events-none invisible"
+                  }`}
+                  aria-hidden={i !== currentSlide}
+                >
+                  <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium px-4 py-1.5 sm:py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full text-yellow-800 mb-4 sm:mb-6 w-fit font-grotesk">
+                    {slide.badge}
                   </span>
-                </h1>
-                <p className="text-base md:text-lg text-[#4A473E] mb-8 max-w-md leading-relaxed font-inter">
-                  {slide.subtitle}
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <a href="#product">
-                    <button className="relative overflow-hidden px-8 py-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-bold rounded-xl shadow-gold hover:shadow-gold-lg hover:scale-[1.03] hover:-translate-y-0.5 transition-all duration-300 font-grotesk tracking-wide group">
-                      <span className="relative z-10 flex items-center gap-2">Shop Now <span aria-hidden="true">✨</span></span>
-                      <div className="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white/30 opacity-0 group-hover:opacity-100 group-hover:left-full transition-all duration-500" />
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-extrabold leading-[1.2] sm:leading-[1.18] md:leading-[1.15] mb-4 sm:mb-5 text-[#1C1A16] font-soria break-words [overflow-wrap:anywhere]">
+                    {slide.title}<br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 via-amber-600 to-yellow-700 bg-[length:200%_auto] animate-gradient-x">
+                      {slide.highlight}
+                    </span>
+                  </h1>
+                  <p className="text-sm sm:text-base md:text-lg text-[#4A473E] mb-6 sm:mb-8 max-w-xl leading-relaxed font-inter break-words [overflow-wrap:anywhere]">
+                    {slide.subtitle}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <a href="#product">
+                      <button className="relative overflow-hidden px-8 py-3.5 sm:py-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-bold rounded-xl shadow-gold hover:shadow-gold-lg hover:scale-[1.03] hover:-translate-y-0.5 transition-all duration-300 font-grotesk tracking-wide group">
+                        <span className="relative z-10 flex items-center gap-2">Shop Now <span aria-hidden="true">✨</span></span>
+                        <div className="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white/30 opacity-0 group-hover:opacity-100 group-hover:left-full transition-all duration-500" />
+                      </button>
+                    </a>
+                    <button
+                      onClick={() => document.getElementById("ingredients")?.scrollIntoView({ behavior: "smooth" })}
+                      className="px-8 py-3.5 sm:py-4 border border-yellow-500/40 text-yellow-700 font-semibold rounded-xl hover:bg-yellow-500/8 hover:border-yellow-500/70 transition-all duration-300 font-grotesk"
+                    >
+                      View Ingredients
                     </button>
-                  </a>
-                  <button
-                    onClick={() => document.getElementById("ingredients")?.scrollIntoView({ behavior: "smooth" })}
-                    className="px-8 py-4 border border-yellow-500/40 text-yellow-700 font-semibold rounded-xl hover:bg-yellow-500/8 hover:border-yellow-500/70 transition-all duration-300 font-grotesk"
-                  >
-                    View Ingredients
-                  </button>
+                  </div>
+                  <div className="mt-8 sm:mt-10 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-[#6C685F] font-inter">
+                    {["⚡ Fast Delivery", "🌿 No Chemicals", "✓ Cruelty Free"].map(t => (
+                      <span key={t} className="flex items-center gap-1.5">{t}</span>
+                    ))}
+                  </div>
                 </div>
-                <div className="mt-10 flex flex-wrap items-center gap-6 text-xs text-[#6C685F] font-inter">
-                  {["⚡ Fast Delivery", "🌿 No Chemicals", "✓ Cruelty Free"].map(t => (
-                    <span key={t} className="flex items-center gap-1.5">{t}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Image column — parallax */}
-          <div className="relative min-h-[380px] lg:h-[600px] flex items-center justify-center">
+          <div className="lg:col-span-5 min-w-0 relative min-h-[340px] sm:min-h-[420px] lg:h-[580px] flex items-center justify-center z-10">
             {heroSlides.map((slide, i) => (
               <div
                 key={i}
@@ -1288,19 +1301,19 @@ export default function Landing() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-14">
             {/* Rating summary */}
             <div className="scroll-animate bg-gradient-to-br from-[#FDFBF7] to-white p-8 rounded-3xl border border-yellow-500/12 shadow-card text-center h-fit">
-              <div className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-500 to-amber-700 font-soria mb-1" aria-label={`Average rating: ${avgRating} out of 5`}>
+              <div className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-500 to-amber-700 font-soria mb-1 notranslate" translate="no" aria-label={`Average rating: ${avgRating} out of 5`}>
                 {avgRating}
               </div>
-              <div className="text-yellow-500 text-2xl tracking-widest my-2" aria-hidden="true">★★★★★</div>
+              <div className="text-yellow-500 text-2xl tracking-widest my-2 notranslate" translate="no" aria-hidden="true">★★★★★</div>
               <p className="text-[#6C685F] text-sm mb-6 font-inter">Based on {hairCareReviews.length} customer review{hairCareReviews.length !== 1 ? "s" : ""}</p>
               <div className="space-y-2.5">
                 {ratingStats.map(row => (
                   <div key={row.stars} className="flex items-center gap-3 text-xs font-inter">
-                    <span className="w-10 text-[#4A473E] text-right shrink-0">{row.stars} ★</span>
+                    <span className="w-10 text-[#4A473E] text-right shrink-0 notranslate" translate="no">{row.stars} ★</span>
                     <div className="flex-1 h-2 bg-[#F5F2EB] rounded-full overflow-hidden">
                       <div className="h-full bg-gradient-to-r from-yellow-600 to-amber-500 rounded-full transition-all duration-700" style={{ width: row.pct }} />
                     </div>
-                    <span className="w-8 text-[#9A9690]">{row.pct}</span>
+                    <span className="w-8 text-[#9A9690] notranslate" translate="no">{row.pct}</span>
                   </div>
                 ))}
               </div>
@@ -1349,15 +1362,16 @@ export default function Landing() {
                     <div className="relative">
                       <select
                         id="review-rating"
-                        className="input-premium appearance-none pr-10 cursor-pointer"
+                        className="input-premium appearance-none pr-10 cursor-pointer notranslate"
+                        translate="no"
                         value={reviewForm.rating}
                         onChange={e => setReviewForm({ ...reviewForm, rating: Number(e.target.value) })}
                       >
-                        <option value="5">★★★★★ — Excellent</option>
-                        <option value="4">★★★★☆ — Good</option>
-                        <option value="3">★★★☆☆ — Average</option>
-                        <option value="2">★★☆☆☆ — Fair</option>
-                        <option value="1">★☆☆☆☆ — Poor</option>
+                        <option value="5">★★★★★ — Excellent (5/5)</option>
+                        <option value="4">★★★★☆ — Good (4/5)</option>
+                        <option value="3">★★★☆☆ — Average (3/5)</option>
+                        <option value="2">★★☆☆☆ — Fair (2/5)</option>
+                        <option value="1">★☆☆☆☆ — Poor (1/5)</option>
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center" aria-hidden="true">
                         <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>

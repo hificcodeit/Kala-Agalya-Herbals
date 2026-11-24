@@ -33,29 +33,53 @@ export default function MyOrders() {
 
   useEffect(() => {
     const token = localStorage.getItem("userToken");
-    if (!token) { navigate("/login"); return; }
+    if (!token) { navigate("/login?redirect=my-orders"); return; }
     (async () => {
       try {
         const res = await fetch(`${API_URL}/orders/my-orders`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        if (data.success) setOrders(data.orders);
+        if (res.status === 401) {
+          localStorage.removeItem("userToken");
+          localStorage.removeItem("userName");
+          localStorage.removeItem("userEmail");
+          localStorage.removeItem("userAvatar");
+          document.dispatchEvent(new Event("profileUpdated"));
+          addToast("Your session has expired. Please log in again to view your orders.", "info");
+          navigate("/login?redirect=my-orders");
+          return;
+        }
+        if (data.success) setOrders(data.orders || []);
         else addToast(data.message || "Failed to load orders", "error");
-      } catch { addToast("Server error", "error"); }
+      } catch { addToast("Server error. Please try again later.", "error"); }
       finally { setLoading(false); }
     })();
-  }, [navigate]);
+  }, [navigate, addToast]);
 
   const markAsDelivered = async (orderId) => {
     try {
       const token = localStorage.getItem("userToken");
+      if (!token) {
+        navigate("/login?redirect=my-orders");
+        return;
+      }
       const res = await fetch(`${API_URL}/orders/${orderId}/customer-status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: "Delivered" })
       });
       const data = await res.json();
+      if (res.status === 401) {
+        localStorage.removeItem("userToken");
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userEmail");
+        localStorage.removeItem("userAvatar");
+        document.dispatchEvent(new Event("profileUpdated"));
+        addToast("Your session has expired. Please log in again.", "info");
+        navigate("/login?redirect=my-orders");
+        return;
+      }
       if (data.success) {
         addToast("Order marked as Delivered!", "success");
         setOrders(prev => prev.map(o => o._id === orderId ? { ...o, orderStatus: "Delivered" } : o));
@@ -113,7 +137,7 @@ export default function MyOrders() {
             </div>
             <p className="text-[#6C685F] text-sm">Track, manage & download invoices for all your purchases</p>
           </div>
-          <Link to="/product" className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+          <Link to="/#product" className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
             Continue Shopping
           </Link>
         </div>
@@ -163,7 +187,7 @@ export default function MyOrders() {
             <h3 className="text-xl font-bold text-[#2C2921] mb-2 font-playfair">{orders.length === 0 ? "No orders yet" : "No orders match"}</h3>
             <p className="text-[#6C685F] text-sm mb-8">{orders.length === 0 ? "Your purchase history will appear here" : "Try a different filter or search term"}</p>
             {orders.length === 0 && (
-              <Link to="/product" className="inline-block px-8 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-bold uppercase tracking-widest text-xs">
+              <Link to="/#product" className="inline-block px-8 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-bold uppercase tracking-widest text-xs">
                 Browse Products
               </Link>
             )}

@@ -380,7 +380,14 @@ exports.getUserOrders = async (req, res) => {
     if (!email) {
       return res.status(400).json({ success: false, message: "User email not found in token" });
     }
-    const orders = await Order.find({ "customer.email": email }).sort({ createdAt: -1 });
+    const escapedEmail = email.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const query = {
+      $or: [
+        { "customer.email": { $regex: new RegExp(`^${escapedEmail}$`, "i") } },
+        ...(req.user._id ? [{ "customer.userId": req.user._id }, { userId: req.user._id }] : [])
+      ]
+    };
+    const orders = await Order.find(query).sort({ createdAt: -1 });
     res.json({ success: true, orders });
   } catch (err) {
     console.error("[getUserOrders] ERROR:", err);

@@ -75,6 +75,14 @@ export const LanguageProvider = ({ children }) => {
     }
   }, []);
 
+  // Synchronize document lang and data-lang attribute whenever currentLang changes
+  useEffect(() => {
+    if (currentLang?.code) {
+      document.documentElement.lang = currentLang.code;
+      document.documentElement.setAttribute("data-lang", currentLang.code);
+    }
+  }, [currentLang]);
+
   // Dynamically load Google Translate Script safely
   useEffect(() => {
     // Define global callback
