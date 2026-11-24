@@ -6,6 +6,7 @@ import { useToast } from "../../components/Alert";
 import AdminLayout from "./AdminLayout";
 import WhatsAppBulkImportModal from "./WhatsAppBulkImportModal";
 import { openInvoice, openBatchInvoices } from "../../services/invoiceGenerator";
+import { openShippingLabels } from "../../services/shippingLabelGenerator";
 
 export default function AdminWhatsAppOrders() {
   const [orders, setOrders] = useState([]);
@@ -537,6 +538,16 @@ export default function AdminWhatsAppOrders() {
     addToast(`Opening batch print view for ${selectedOrders.length} invoice(s)... 🖨️`, "info");
   };
 
+  const handlePrintLabelsSelected = () => {
+    const selectedOrders = orders.filter((o) => selectedOrderIds.includes(o._id));
+    if (selectedOrders.length === 0) {
+      addToast("Please select at least one order to print labels", "error");
+      return;
+    }
+    openShippingLabels(selectedOrders);
+    addToast(`Opening 152×102mm thermal shipping labels for ${selectedOrders.length} order(s)... 📦`, "info");
+  };
+
   // ── WhatsApp Messaging Function with 20-Minute Secure Expiring PDF Link ──
   const handleSendWhatsAppMessage = async (order) => {
     if (!order) return;
@@ -974,23 +985,40 @@ export default function AdminWhatsAppOrders() {
                 {selectedOrderIds.length} order{selectedOrderIds.length > 1 ? "s" : ""} selected
               </span>
             </div>
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 1. Print Shipping Labels (152x102mm Thermal) */}
+              <button
+                type="button"
+                onClick={handlePrintLabelsSelected}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-bold font-grotesk uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                title="Print 152×102mm (6x4 inch) 2-Up Thermal Courier Stickers"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <span>Print Shipping Labels ({selectedOrderIds.length})</span>
+              </button>
+
+              {/* 2. Print Full Invoices */}
               <button
                 type="button"
                 onClick={handlePrintSelected}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black text-xs font-bold font-grotesk uppercase tracking-wider flex items-center gap-2 shadow-gold active:scale-95 transition-all"
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black text-xs font-bold font-grotesk uppercase tracking-wider flex items-center gap-1.5 shadow-gold active:scale-95 transition-all"
+                title="Print Full Tax Invoices"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
-                <span>Print All Invoices ({selectedOrderIds.length})</span>
+                <span>Invoices ({selectedOrderIds.length})</span>
               </button>
+
+              {/* 3. Deselect All */}
               <button
                 type="button"
                 onClick={() => setSelectedOrderIds([])}
-                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold font-grotesk uppercase tracking-wider transition-colors"
+                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold font-grotesk uppercase tracking-wider transition-colors"
               >
-                Deselect All
+                Deselect
               </button>
             </div>
           </div>
@@ -1183,6 +1211,18 @@ export default function AdminWhatsAppOrders() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
                               <span>Invoice</span>
+                            </button>
+
+                            {/* Thermal Shipping Label (152x102mm) */}
+                            <button
+                              onClick={() => openShippingLabels(order)}
+                              title="Print 152×102mm Thermal Shipping Label"
+                              className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-[10px] font-grotesk uppercase tracking-wider shadow-xs transition-all flex items-center gap-1"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                              <span>Label</span>
                             </button>
 
                             {/* Edit Button */}
