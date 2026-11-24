@@ -1,5 +1,6 @@
-// ─── 152mm x 102mm Thermal Shipping Label Generator (2-Up Layout) ─────────────
-// Format matches Kala Agalya Herbals thermal parcel sticker printer (Custom-152x102-Gap)
+// ─── 152mm x 102mm Thermal Shipping Label Generator (Single Order Layout) ─────
+// Custom-designed for Kala Agalya Herbals thermal parcel sticker printer (152x102mm)
+// Features: Left-corner brand logo, large bold typography, single customer order per sheet
 
 /**
  * Clean phone number to 10 digits
@@ -14,20 +15,27 @@ function cleanPhone(phone) {
 }
 
 /**
- * Format items into compact upper-case product summary (e.g. "100ML 1", "200ML 2")
+ * Format items into compact upper-case product summary (e.g. "100ML 1", "200ML (2PES) 1")
  */
 function formatItemSummary(items) {
   if (!Array.isArray(items) || items.length === 0) return "100ML 1";
   return items
     .map((item) => {
-      const size =
-        item.size && item.size !== "Standard"
-          ? item.size.toUpperCase()
-          : item.name
-          ? item.name.split(" ")[0].toUpperCase()
-          : "OIL";
+      let label = "";
+      if (item.size && item.size !== "Standard") {
+        label = item.size.toUpperCase();
+      } else if (item.name) {
+        const sizeMatch = item.name.match(/(\d+\s*(?:ml|g|kg|l|pcs|pes))/i);
+        if (sizeMatch) {
+          label = sizeMatch[1].toUpperCase();
+        } else {
+          label = item.name.split(" ")[0].toUpperCase();
+        }
+      } else {
+        label = "OIL";
+      }
       const qty = item.quantity || 1;
-      return `${size} ${qty}`;
+      return `${label} ${qty}`;
     })
     .join(", ");
 }
@@ -51,15 +59,13 @@ function parseAddressLines(order) {
     }
 
     if (addr.landmark) {
-      lines.push(`LM. ${addr.landmark}`);
+      lines.push(`LM: ${addr.landmark}`);
     }
 
-    if (addr.district && addr.state && addr.district !== addr.state) {
-      lines.push(`${addr.district}, ${addr.state}`);
-    } else if (addr.district) {
-      lines.push(addr.district);
-    } else if (addr.state) {
-      lines.push(addr.state);
+    const locParts = [addr.district, addr.state].filter(Boolean);
+    if (locParts.length > 0) {
+      const uniqueLoc = locParts.filter((v, i, a) => a.indexOf(v) === i);
+      lines.push(uniqueLoc.join(", "));
     }
 
     if (addr.pincode) {
@@ -70,7 +76,6 @@ function parseAddressLines(order) {
     const full = (addr.fullAddress || addr || "").trim();
     const parts = full.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
     parts.forEach((p) => {
-      // Check if this part contains pincode
       const pinMatch = p.match(/\b(6\d{5})\b/);
       if (pinMatch && !p.toLowerCase().includes("pincode")) {
         lines.push(`Pincode - ${pinMatch[1]}`);
@@ -81,51 +86,6 @@ function parseAddressLines(order) {
   }
 
   return lines;
-}
-
-/**
- * Render single shipping label HTML card (73mm x 98mm)
- */
-function renderSingleShippingLabel(order) {
-  if (!order) {
-    return `<div class="single-label empty"></div>`;
-  }
-
-  const customer = order.customer || {};
-  const name = customer.name || "Customer";
-  const phone = cleanPhone(customer.mobileNumber || customer.whatsappNumber);
-  const itemSummary = formatItemSummary(order.items);
-  const addressLines = parseAddressLines(order);
-
-  const addressHtml = addressLines
-    .slice(0, 5) // Keep up to 5 lines for optimal thermal fit
-    .map((line) => `<div class="address-line">${escapeHtml(line)}</div>`)
-    .join("");
-
-  return `
-    <div class="single-label">
-      <!-- Top Line: TO on left, Product Variant & Qty on right -->
-      <div class="label-header">
-        <span class="to-text">TO</span>
-        <span class="product-summary">${escapeHtml(itemSummary)}</span>
-      </div>
-
-      <!-- Center Customer Delivery Details -->
-      <div class="customer-address">
-        <div class="customer-name">${escapeHtml(name)}</div>
-        ${addressHtml}
-        <div class="customer-phone">PH.${phone}</div>
-      </div>
-
-      <!-- Fixed Sender ("From") Block -->
-      <div class="from-block">
-        <div class="from-label">From :</div>
-        <div class="from-name">Kala Agalya Herbals</div>
-        <div class="from-address">TNHB, Ayapakkam</div>
-        <div class="from-cell">Cell : 7338758727</div>
-      </div>
-    </div>
-  `;
 }
 
 /**
@@ -142,7 +102,78 @@ function escapeHtml(str) {
 }
 
 /**
- * Get CSS styles optimized for 152mm x 102mm thermal printer roll (2-Up)
+ * Render single shipping label HTML card (fills full 152mm x 102mm sheet)
+ */
+function renderSingleShippingLabel(order, logoUrl) {
+  if (!order) {
+    return `<div class="single-label empty"></div>`;
+  }
+
+  const customer = order.customer || {};
+  const name = customer.name || "Customer";
+  const phone = cleanPhone(customer.mobileNumber || customer.whatsappNumber);
+  const itemSummary = formatItemSummary(order.items);
+  const addressLines = parseAddressLines(order);
+
+  const addressHtml = addressLines
+    .slice(0, 5) // Keep up to 5 lines for optimal thermal fit
+    .map((line) => {
+      const isPin = line.toLowerCase().includes("pincode");
+      return `<div class="address-line ${isPin ? "pincode-highlight" : ""}">${escapeHtml(line)}</div>`;
+    })
+    .join("");
+
+  const logoImgHtml = `<img src="${escapeHtml(logoUrl)}" alt="Kala Agalya Herbals Logo" class="brand-logo" onerror="if(!this.dataset.retry){this.dataset.retry=1;this.src='/images/icons/logo.png';}else{this.style.display='none';}" />`;
+
+  return `
+    <div class="single-label">
+      <!-- Top Line: Logo in left corner + TO, and Product Variant & Qty on right -->
+      <div class="label-header">
+        <div class="header-left">
+          ${logoImgHtml}
+          <div class="to-wrapper">
+            <span class="to-text">TO</span>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="product-badge">
+            <span class="product-summary">${escapeHtml(itemSummary)}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Customer Delivery Details (Large, Bold) -->
+      <div class="customer-address">
+        <div class="customer-name">${escapeHtml(name)}</div>
+        ${addressHtml}
+        <div class="customer-phone">PH.${phone}</div>
+      </div>
+
+      <!-- Bottom Sender ("From") Block & Order Reference -->
+      <div class="label-footer">
+        <div class="from-block">
+          <div class="from-label">From :</div>
+          <div class="from-name">Kala Agalya Herbals</div>
+          <div class="from-address">TNHB, Ayapakkam</div>
+          <div class="from-cell">Cell : 7338758727</div>
+        </div>
+        ${
+          order.invoiceNumber || order.orderId
+            ? `
+          <div class="order-ref-block">
+            <div class="order-ref-title">Order Ref</div>
+            <div class="order-ref-number">#${escapeHtml(order.invoiceNumber || order.orderId)}</div>
+          </div>
+        `
+            : ""
+        }
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Get CSS styles optimized for 152mm x 102mm single customer thermal label
  */
 function getShippingLabelStyles() {
   return `
@@ -175,8 +206,10 @@ function getShippingLabelStyles() {
       border-bottom: 2px solid #d97706;
       padding: 10px 20px;
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     }
     .screen-actions .left-info {
@@ -191,6 +224,37 @@ function getShippingLabelStyles() {
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-wrap: wrap;
+    }
+    .size-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #2a2416;
+      padding: 3px 6px;
+      border-radius: 8px;
+      border: 1px solid #4a3d1f;
+      color: #e5e7eb;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .size-btn {
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      background: #1c1a16;
+      color: #fbbf24;
+      transition: all 0.15s ease;
+    }
+    .size-btn:hover {
+      background: #3a3220;
+    }
+    .size-btn.active {
+      background: #fbbf24;
+      color: #000000;
     }
     .action-btn {
       cursor: pointer;
@@ -229,8 +293,8 @@ function getShippingLabelStyles() {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px 10px 60px;
-      gap: 20px;
+      padding: 25px 10px 60px;
+      gap: 25px;
     }
 
     /* Each 152mm x 102mm Thermal Sheet Container */
@@ -238,72 +302,71 @@ function getShippingLabelStyles() {
       width: 152mm;
       height: 102mm;
       background: #ffffff;
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: stretch;
-      padding: 3.5mm 4.5mm;
+      box-sizing: border-box;
+      padding: 5mm 7mm;
       overflow: hidden;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      border-radius: 2px;
+      border-radius: 4px;
       page-break-after: always;
       break-after: page;
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
 
-    /* Vertical Dashed Center Guide (hidden on print) */
-    .sheet-divider {
-      position: absolute;
-      top: 5mm;
-      bottom: 5mm;
-      left: 50%;
-      border-left: 1px dashed #d1d5db;
-      pointer-events: none;
-    }
-
-    /* Single 2-Up Thermal Label Card (approx 71mm x 95mm) */
     .single-label {
-      width: 69.5mm;
-      height: 95mm;
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       box-sizing: border-box;
-      padding: 2.5mm 3mm;
-      overflow: hidden;
       background: #ffffff;
     }
 
-    .single-label.empty {
-      background: transparent;
-    }
-
-    /* ─── Header: TO + Product Summary ────────────────── */
+    /* ─── Header: Logo in Left Corner + TO + Product Summary ── */
     .label-header {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      font-weight: 900;
+      align-items: center;
+      padding-bottom: 2mm;
+      border-bottom: 1.5px solid #000000;
       margin-bottom: 2mm;
-      border-bottom: 1px solid transparent;
     }
-    .to-text {
-      font-size: 15pt;
-      font-weight: 900;
-      letter-spacing: 0.5px;
-      line-height: 1;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 3.5mm;
     }
-    .product-summary {
-      font-size: 12.5pt;
-      font-weight: 800;
-      text-transform: uppercase;
-      text-align: right;
-      letter-spacing: 0.3px;
-      line-height: 1;
-      max-width: 48mm;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+
+    .brand-logo {
+      width: 24mm;
+      height: 24mm;
+      object-fit: contain;
+      flex-shrink: 0;
+      border-radius: 4px;
+    }
+
+    .to-wrapper {
+      display: flex;
+      align-items: center;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .product-badge {
+      display: inline-flex;
+      align-items: center;
+      border: 2px solid #000000;
+      border-radius: 4px;
+      padding: 1.5mm 3.5mm;
+      background: #ffffff;
+      max-width: 85mm;
     }
 
     /* ─── Center: Customer Delivery Info ──────────────── */
@@ -312,52 +375,160 @@ function getShippingLabelStyles() {
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      margin-bottom: 1mm;
+      margin-top: 1mm;
+      margin-bottom: 2mm;
       overflow: hidden;
     }
+
     .customer-name {
-      font-size: 11pt;
-      font-weight: 800;
       line-height: 1.2;
-      margin-bottom: 1.2mm;
+      margin-bottom: 1.5mm;
+      color: #000000;
       word-break: break-word;
+      text-transform: uppercase;
     }
+
     .address-line {
-      font-size: 9.5pt;
-      font-weight: 500;
-      line-height: 1.25;
-      color: #000;
+      line-height: 1.32;
+      color: #000000;
       word-break: break-word;
     }
+
+    .pincode-highlight {
+      font-weight: 900;
+    }
+
     .customer-phone {
-      font-size: 10.5pt;
-      font-weight: 800;
       line-height: 1.2;
-      margin-top: 1.8mm;
-      letter-spacing: 0.3px;
+      margin-top: 2mm;
+      letter-spacing: 0.5px;
+      color: #000000;
     }
 
     /* ─── Bottom: Sender ("From") Block ──────────────── */
-    .from-block {
+    .label-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-top: 2mm;
+      border-top: 1.5px solid #000000;
       margin-top: auto;
+    }
+
+    .from-block {
       line-height: 1.25;
-      padding-top: 1.5mm;
     }
+
     .from-label {
-      font-size: 9pt;
-      font-weight: 700;
+      color: #000000;
     }
+
     .from-name {
-      font-size: 9.5pt;
-      font-weight: 800;
+      color: #000000;
     }
+
     .from-address {
-      font-size: 9pt;
-      font-weight: 500;
+      color: #000000;
     }
+
     .from-cell {
-      font-size: 9pt;
+      color: #000000;
+    }
+
+    .order-ref-block {
+      text-align: right;
+      line-height: 1.2;
+    }
+
+    .order-ref-title {
+      font-size: 9.5pt;
       font-weight: 700;
+      text-transform: uppercase;
+      color: #333333;
+    }
+
+    .order-ref-number {
+      font-size: 12pt;
+      font-weight: 900;
+      font-family: monospace, Courier, sans-serif;
+      color: #000000;
+    }
+
+    /* ─── Default Text Sizes: LARGE (Increased for Clarity) ── */
+    body, body.size-large {
+      .to-text {
+        font-size: 26pt;
+        font-weight: 900;
+        letter-spacing: 1px;
+        line-height: 1;
+      }
+      .product-summary {
+        font-size: 18pt;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        line-height: 1.1;
+      }
+      .customer-name {
+        font-size: 19pt;
+        font-weight: 900;
+      }
+      .address-line {
+        font-size: 14pt;
+        font-weight: 600;
+      }
+      .pincode-highlight {
+        font-size: 15pt;
+        font-weight: 900;
+      }
+      .customer-phone {
+        font-size: 18pt;
+        font-weight: 900;
+      }
+      .from-label {
+        font-size: 11pt;
+        font-weight: 800;
+      }
+      .from-name {
+        font-size: 12.5pt;
+        font-weight: 900;
+      }
+      .from-address {
+        font-size: 11.5pt;
+        font-weight: 600;
+      }
+      .from-cell {
+        font-size: 12pt;
+        font-weight: 800;
+      }
+    }
+
+    /* Extra Large Option */
+    body.size-xl {
+      .to-text { font-size: 28pt; }
+      .product-summary { font-size: 20pt; }
+      .customer-name { font-size: 21pt; }
+      .address-line { font-size: 15pt; }
+      .pincode-highlight { font-size: 16pt; }
+      .customer-phone { font-size: 19.5pt; }
+      .from-label { font-size: 11.5pt; }
+      .from-name { font-size: 13.5pt; }
+      .from-address { font-size: 12pt; }
+      .from-cell { font-size: 12.5pt; }
+    }
+
+    /* Normal Option (for super-dense addresses) */
+    body.size-normal {
+      .to-text { font-size: 22pt; }
+      .product-summary { font-size: 15pt; }
+      .customer-name { font-size: 16pt; }
+      .address-line { font-size: 12pt; }
+      .pincode-highlight { font-size: 13pt; }
+      .customer-phone { font-size: 15pt; }
+      .from-label { font-size: 10pt; }
+      .from-name { font-size: 11pt; }
+      .from-address { font-size: 10.5pt; }
+      .from-cell { font-size: 11pt; }
     }
 
     /* ─── PRINT RULES ────────────────────────────────── */
@@ -377,12 +548,12 @@ function getShippingLabelStyles() {
       .label-sheet {
         box-shadow: none !important;
         border-radius: 0 !important;
+        border: none !important;
         margin: 0 !important;
         page-break-after: always !important;
         break-after: page !important;
-      }
-      .sheet-divider {
-        display: none !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
     }
   `;
@@ -391,25 +562,22 @@ function getShippingLabelStyles() {
 /**
  * Generate complete HTML document for shipping labels
  */
-export function generateShippingLabelsHTML(orders) {
+export function generateShippingLabelsHTML(orders, logoUrl) {
   const orderList = Array.isArray(orders) ? orders : [orders];
   if (orderList.length === 0) return "";
 
-  // Pair orders into sheets of 2 (2-Up)
-  const sheets = [];
-  for (let i = 0; i < orderList.length; i += 2) {
-    const leftOrder = orderList[i];
-    const rightOrder = orderList[i + 1] || null;
-    sheets.push({ leftOrder, rightOrder });
-  }
+  const resolvedLogoUrl =
+    logoUrl ||
+    (typeof window !== "undefined" && window.location
+      ? `${window.location.origin}/images/icons/logo.png`
+      : "/images/icons/logo.png");
 
-  const sheetsHtml = sheets
+  // Each order occupies its own full 152mm x 102mm sheet (Single Customer Order)
+  const sheetsHtml = orderList
     .map(
-      ({ leftOrder, rightOrder }) => `
+      (order) => `
       <div class="label-sheet">
-        ${renderSingleShippingLabel(leftOrder)}
-        <div class="sheet-divider no-print"></div>
-        ${renderSingleShippingLabel(rightOrder)}
+        ${renderSingleShippingLabel(order, resolvedLogoUrl)}
       </div>
     `
     )
@@ -420,21 +588,27 @@ export function generateShippingLabelsHTML(orders) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shipping Labels (${orderList.length} Orders - 152x102mm) | Kala Agalya Herbals</title>
+  <title>Shipping Labels (${orderList.length} Order${orderList.length > 1 ? "s" : ""} - 152x102mm) | Kala Agalya Herbals</title>
   <style>
     ${getShippingLabelStyles()}
   </style>
 </head>
-<body>
+<body class="size-large">
 
   <!-- Screen Action Floating Bar (Hidden during Print) -->
   <div class="screen-actions no-print">
     <div class="left-info">
       <span>📦 Kala Agalya Herbals</span>
       <span>•</span>
-      <span>Shipping Labels: ${orderList.length} Order${orderList.length > 1 ? "s" : ""} (${sheets.length} Sheet${sheets.length > 1 ? "s" : ""} @ 152×102mm)</span>
+      <span>Shipping Labels: ${orderList.length} Order${orderList.length > 1 ? "s" : ""} (${orderList.length} Sheet${orderList.length > 1 ? "s" : ""} @ 152×102mm - Single Customer per Sheet)</span>
     </div>
     <div class="btn-group">
+      <div class="size-controls">
+        <span>Text Size:</span>
+        <button type="button" class="size-btn" onclick="setSize('size-normal', this)">Normal</button>
+        <button type="button" class="size-btn active" onclick="setSize('size-large', this)">Large (Default)</button>
+        <button type="button" class="size-btn" onclick="setSize('size-xl', this)">Extra Large</button>
+      </div>
       <button class="action-btn btn-close" onclick="window.close()">✕ Close</button>
       <button class="action-btn btn-print" onclick="window.print()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
@@ -446,6 +620,14 @@ export function generateShippingLabelsHTML(orders) {
   <div class="preview-container">
     ${sheetsHtml}
   </div>
+
+  <script>
+    function setSize(sizeClass, btnEl) {
+      document.body.className = sizeClass;
+      document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+    }
+  </script>
 
 </body>
 </html>`;
@@ -459,7 +641,12 @@ export function openShippingLabels(orders) {
   const list = Array.isArray(orders) ? orders : [orders];
   if (list.length === 0) return;
 
-  const html = generateShippingLabelsHTML(list);
+  const logoUrl =
+    typeof window !== "undefined" && window.location
+      ? `${window.location.origin}/images/icons/logo.png`
+      : "/images/icons/logo.png";
+
+  const html = generateShippingLabelsHTML(list, logoUrl);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
@@ -474,4 +661,3 @@ export function openShippingLabels(orders) {
     document.body.removeChild(a);
   }
 }
-
