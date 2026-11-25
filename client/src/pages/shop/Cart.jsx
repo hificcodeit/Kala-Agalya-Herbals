@@ -1,46 +1,31 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { API_URL, BASE_URL } from "../../services/api";
+import { API_URL } from "../../services/api";
 import { Helmet } from "react-helmet-async";
+import { sanitizeCartItems, syncCartWithProducts } from "../../utils/cartUtils";
 
 export default function Cart() {
   const [cart, setCart] = useState([]);
 
   /* ── Load & sync cart ────────────────────────────────── */
   useEffect(() => {
-    let saved = JSON.parse(localStorage.getItem("cart")) || [];
-    const stripped = saved.map(({ img, ...rest }) => rest);
+    let saved = [];
+    try {
+      saved = JSON.parse(localStorage.getItem("cart")) || [];
+    } catch {
+      saved = [];
+    }
+    const stripped = sanitizeCartItems(saved);
     try { localStorage.setItem("cart", JSON.stringify(stripped)); } catch {
       localStorage.removeItem("cart");
-      saved = [];
     }
     setCart(stripped);
 
     fetch(`${API_URL}/products`)
       .then(r => r.json())
       .then(data => {
-        if (data.success && data.products) {
-          const updated = stripped.map(item => {
-            const dbProd = data.products.find(p =>
-              item.productId ? p._id === item.productId : item.id ? item.id.startsWith(p._id) : p.name === item.name
-            );
-            if (dbProd) {
-              const si  = dbProd.sizes.findIndex(s => s.size === item.size);
-              if (si !== -1) {
-                const dbSize  = dbProd.sizes[si];
-                const price   = dbSize.offerPrice || dbSize.price;
-                let rawImg    = dbProd.images && (dbProd.images[si] || dbProd.images[0]);
-                let displayImg = "/images/icons/logo.webp";
-                if (rawImg) {
-                  if (rawImg.startsWith("data:image")) displayImg = rawImg;
-                  else if (rawImg.startsWith("http") || rawImg.startsWith("/images/")) displayImg = rawImg;
-                  else displayImg = `${BASE_URL.replace(/\/api$/, "")}${rawImg.startsWith("/") ? rawImg : `/${rawImg}`}`;
-                }
-                return { ...item, price, img: displayImg };
-              }
-            }
-            return item;
-          });
+        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+          const updated = syncCartWithProducts(stripped, data.products, { includeImage: true });
           const light = updated.map(({ img, ...rest }) => rest);
           try { localStorage.setItem("cart", JSON.stringify(light)); } catch { /* ignore */ }
           document.dispatchEvent(new Event("cartUpdated"));

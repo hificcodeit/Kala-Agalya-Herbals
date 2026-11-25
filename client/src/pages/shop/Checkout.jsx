@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { createOrder } from "../../services/api";
+import { API_URL, createOrder } from "../../services/api";
+import { sanitizeCartItems, syncCartWithProducts } from "../../utils/cartUtils";
 
 // Indian states list
 const INDIAN_STATES = [
@@ -56,8 +57,43 @@ function getShippingInfo(state) {
 }
 
 export default function Checkout() {
-  const cart = JSON.parse(localStorage.getItem("cart")) || [];
+  const [cart, setCart] = useState(() => {
+    try {
+      return sanitizeCartItems(JSON.parse(localStorage.getItem("cart")) || []);
+    } catch {
+      return [];
+    }
+  });
+  const [syncingPrices, setSyncingPrices] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+
+  // Always refresh authoritative product prices from backend on checkout load
+  useEffect(() => {
+    let active = true;
+    fetch(`${API_URL}/products`)
+      .then(r => r.json())
+      .then(data => {
+        if (!active) return;
+        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+          setCart(prevCart => {
+            const verified = syncCartWithProducts(prevCart, data.products);
+            try { localStorage.setItem("cart", JSON.stringify(verified)); } catch { /* ignore */ }
+            document.dispatchEvent(new Event("cartUpdated"));
+            if (verified.length === 0) {
+              navigate("/cart");
+            }
+            return verified;
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setSyncingPrices(false);
+      });
+
+    return () => { active = false; };
+  }, [navigate]);
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
@@ -96,10 +132,12 @@ export default function Checkout() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (syncingPrices || submitting || cart.length === 0) return;
     
     // Always save form fields first
     localStorage.setItem("checkoutForm", JSON.stringify(form));
 
+    // Only send product identifiers & quantities; server calculates authoritative prices, shipping, and total
     const orderData = {
       customer: {
         name: form.name,
@@ -113,13 +151,12 @@ export default function Checkout() {
         }
       },
       items: cart.map(item => ({
+        productId: item.productId,
+        id: item.id,
         name: item.name,
         size: item.size,
-        price: item.price,
         quantity: item.quantity
-      })),
-      shippingAmount: shipping.amount,
-      totalAmount: finalAmount
+      }))
     };
 
     // Check if logged in. If not, redirect to login
@@ -128,21 +165,24 @@ export default function Checkout() {
       return;
     }
 
+    setSubmitting(true);
     try {
       const data = await createOrder(orderData);
       if (data.success && data.order && data.order._id) {
         localStorage.setItem("lastOrderId", data.order._id);
-        localStorage.setItem("lastOrderTotal", finalAmount);
+        localStorage.setItem("lastOrderTotal", String(data.order.totalAmount));
         // Clear checkout cache on successful order creation
         localStorage.removeItem("checkoutForm");
         navigate("/payment");
       } else {
         console.error("Order creation returned no ID:", data);
-        alert("Could not create order. Please check the form and try again.");
+        alert(data.message || "Could not create order. Please check the form and try again.");
       }
     } catch (err) {
       console.error("Order creation failed", err);
       alert("Server error. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -371,11 +411,12 @@ export default function Checkout() {
               <button
                 type="submit"
                 form="checkout-form"
-                className="w-full group relative py-5 bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-600 bg-size-200 hover:bg-pos-100 text-black font-extrabold text-lg rounded-xl shadow-[0_0_25px_rgba(234,179,8,0.4)] hover:shadow-[0_0_40px_rgba(234,179,8,0.6)] transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-500 uppercase tracking-widest overflow-hidden"
+                disabled={syncingPrices || submitting || cart.length === 0}
+                className="w-full group relative py-5 bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-600 bg-size-200 hover:bg-pos-100 text-black font-extrabold text-lg rounded-xl shadow-[0_0_25px_rgba(234,179,8,0.4)] hover:shadow-[0_0_40px_rgba(234,179,8,0.6)] transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-500 uppercase tracking-widest overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none skew-x-12 -translate-x-full group-hover:translate-x-full duration-1000"></div>
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  Continue to Payment
+                  {syncingPrices ? "Verifying Prices..." : submitting ? "Creating Order..." : "Continue to Payment"}
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>

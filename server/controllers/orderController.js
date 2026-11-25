@@ -1,24 +1,119 @@
 const Order = require("../models/Order");
+const Product = require("../models/Product");
 const crypto = require("crypto");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const cache = require("../utils/cache");
+const { calculateVerifiedOrder } = require("../utils/orderPricing");
 
 const PHONEPE_TOKEN_CACHE_KEY = "phonepe_auth_token";
 
 /**
+ * Extract a valid MongoDB ObjectId from productId or composite id ("<objectId>-<size>").
+ */
+function extractProductObjectId(item) {
+  if (item?.productId && mongoose.Types.ObjectId.isValid(item.productId)) {
+    return String(item.productId);
+  }
+  if (typeof item?.id === "string") {
+    const candidate = item.id.split("-")[0];
+    if (mongoose.Types.ObjectId.isValid(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Sanitize and validate customer payload without trusting client totals or extra fields.
+ */
+function sanitizeCustomerPayload(rawCustomer, authUser) {
+  const customer = rawCustomer && typeof rawCustomer === "object" ? rawCustomer : {};
+  const address = customer.address && typeof customer.address === "object" ? customer.address : {};
+
+  const name = String(customer.name || authUser?.name || "").trim();
+  const email = String(authUser?.email || customer.email || "").trim();
+  const phone = String(customer.phone || "").trim();
+  const street = String(address.street || "").trim();
+  const district = String(address.district || "").trim();
+  const state = String(address.state || "").trim();
+  const pincode = String(address.pincode || "").trim();
+
+  if (!name || !email || !/^[0-9]{10}$/.test(phone)) {
+    const err = new Error("Valid customer name, email, and 10-digit phone number are required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!street || !district || !state || !/^[0-9]{6}$/.test(pincode)) {
+    const err = new Error("Complete shipping address with valid state and 6-digit pincode is required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return {
+    name,
+    email,
+    phone,
+    altPhone: customer.altPhone ? String(customer.altPhone).trim() : "",
+    address: {
+      door: address.door ? String(address.door).trim() : "",
+      street,
+      landmark: address.landmark ? String(address.landmark).trim() : "",
+      district,
+      state,
+      pincode,
+    },
+  };
+}
+
+/**
  * Standard Order Creation (from Checkout)
+ * Server-authoritative: ignores client prices, shippingAmount, and totalAmount.
  */
 exports.createOrder = async (req, res) => {
   try {
+    const rawItems = req.body?.items;
+    const customer = sanitizeCustomerPayload(req.body?.customer, req.user);
+
+    // Load active products from DB so prices cannot be tampered with via localStorage or HTTP body
+    const products = await Product.find({ isActive: { $ne: false } }).lean();
+    const byId = new Map(products.map((p) => [String(p._id), p]));
+    const byName = new Map(
+      products.map((p) => [String(p.name || "").trim().toLowerCase(), p])
+    );
+
+    const resolveProduct = (rawItem) => {
+      const objectId = extractProductObjectId(rawItem);
+      if (objectId && byId.has(objectId)) {
+        return byId.get(objectId);
+      }
+      const nameKey = String(rawItem?.name || "").trim().toLowerCase();
+      if (nameKey && byName.has(nameKey)) {
+        return byName.get(nameKey);
+      }
+      return null;
+    };
+
+    const { items, shippingAmount, totalAmount } = calculateVerifiedOrder(
+      rawItems,
+      resolveProduct,
+      customer.address.state
+    );
+
     const order = await Order.create({
-        ...req.body,
-        paymentStatus: "PENDING",
-        orderStatus: "Pending"
+      customer,
+      items,
+      shippingAmount,
+      totalAmount,
+      paymentStatus: "PENDING",
+      orderStatus: "Pending",
     });
+
     res.status(201).json({ success: true, order });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const status = err.statusCode || 500;
+    res.status(status).json({ success: false, message: err.message });
   }
 };
 
@@ -74,14 +169,30 @@ exports.initiatePhonePe = async (req, res) => {
       return res.status(500).json({ success: false, message: `Missing server config: ${missingVars.join(", ")}` });
     }
 
-    // ── 2. Load order ────────────────────────────────────────────────────
+    if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ success: false, message: "Invalid order ID" });
+    }
+
+    // ── 2. Load order & verify ownership/state ───────────────────────────
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
+    if (
+      req.user?.email &&
+      order.customer?.email &&
+      order.customer.email.trim().toLowerCase() !== req.user.email.trim().toLowerCase()
+    ) {
+      return res.status(403).json({ success: false, message: "Unauthorized access to order" });
+    }
+
+    if (order.paymentStatus === "PAID") {
+      return res.status(400).json({ success: false, message: "Order is already paid" });
+    }
+
     // ── 3. Build IDs & amount ────────────────────────────────────────────
     const merchantOrderId = "T" + order._id.toString();
-    const amountInPaise = Math.round(order.totalAmount * 100);
-    if (!amountInPaise || amountInPaise <= 0) {
+    const amountInPaise = Math.round(Number(order.totalAmount) * 100);
+    if (!Number.isFinite(amountInPaise) || amountInPaise < 100) {
       return res.status(400).json({ success: false, message: "Order total amount is invalid" });
     }
 
@@ -206,12 +317,30 @@ exports.checkStatus = async (req, res) => {
     
         if (response.ok && (state === "COMPLETED" || state === "SUCCESS" || state === "PAYMENT_SUCCESS")) {
           const orderId = merchantOrderId.startsWith("T") ? merchantOrderId.slice(1) : merchantOrderId;
-          console.log("[checkStatus] Updating order to PAID, orderId:", orderId);
-          await Order.findByIdAndUpdate(orderId, {
-            paymentStatus: "PAID",
-            paymentDate: new Date(),
-            paymentId: data.orderId || merchantOrderId
-          });
+          const order = await Order.findById(orderId);
+          if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+          }
+
+          // Verify paid amount (in paise) matches the server-calculated order total when reported by PhonePe
+          const reportedAmount =
+            data.amount ??
+            (data.data && data.data.amount) ??
+            (data.paymentDetails && data.paymentDetails[0] && data.paymentDetails[0].amount);
+          const expectedPaise = Math.round(Number(order.totalAmount) * 100);
+          if (reportedAmount !== undefined && reportedAmount !== null && Number(reportedAmount) !== expectedPaise) {
+            console.error("[checkStatus] Amount mismatch! expected:", expectedPaise, "got:", reportedAmount, "orderId:", orderId);
+            return res.status(400).json({ success: false, message: "Payment amount mismatch" });
+          }
+
+          if (order.paymentStatus !== "PAID") {
+            console.log("[checkStatus] Updating order to PAID, orderId:", orderId);
+            await Order.findByIdAndUpdate(orderId, {
+              paymentStatus: "PAID",
+              paymentDate: new Date(),
+              paymentId: data.orderId || merchantOrderId
+            });
+          }
           res.json({ success: true, message: "Payment Verified" });
         } else {
           console.log("[checkStatus] Payment NOT verified. state:", state, "| data.message:", data.message);
@@ -266,9 +395,17 @@ exports.phonePeCallback = async (req, res) => {
         ? merchantOrderId.slice(1)
         : merchantOrderId;
 
-      // Only update if still PENDING (avoid duplicate updates)
+      // Only update if still PENDING (avoid duplicate updates) and amount matches
       const order = await Order.findById(orderId);
-      if (order && order.paymentStatus !== "PAID") {
+      const reportedAmount =
+        payload.amount ??
+        body.amount ??
+        (payload.paymentDetails && payload.paymentDetails[0] && payload.paymentDetails[0].amount);
+      const expectedPaise = order ? Math.round(Number(order.totalAmount) * 100) : null;
+
+      if (order && reportedAmount !== undefined && reportedAmount !== null && Number(reportedAmount) !== expectedPaise) {
+        console.error("[phonePeCallback] Amount mismatch! expected:", expectedPaise, "got:", reportedAmount, "orderId:", orderId);
+      } else if (order && order.paymentStatus !== "PAID") {
         await Order.findByIdAndUpdate(orderId, {
           paymentStatus: "PAID",
           paymentDate: new Date(),

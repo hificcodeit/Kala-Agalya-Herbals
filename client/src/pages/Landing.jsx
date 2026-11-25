@@ -931,7 +931,9 @@ export default function Landing() {
             .filter(p => p.isActive !== false)
             .flatMap(prod =>
               prod.sizes.map((s, idx) => {
-                const price = s.price;
+                const price = (s.offerPrice !== null && s.offerPrice !== undefined && Number(s.offerPrice) > 0)
+                  ? Number(s.offerPrice)
+                  : Number(s.price);
                 const mrp   = s.mrp && s.mrp > price ? s.mrp : null;
                 const savings = mrp ? `Save ₹${mrp - price}` : null;
                 return {

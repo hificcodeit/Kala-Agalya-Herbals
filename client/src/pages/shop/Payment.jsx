@@ -1,21 +1,62 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "../../components/Alert";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { API_URL } from "../../services/api";
 
 export default function Payment() {
-  const cart = JSON.parse(localStorage.getItem("cart")) || [];
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = Number(localStorage.getItem("lastOrderTotal")) || subtotal;
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(true);
+  const [orderTotal, setOrderTotal] = useState(null);
+
+  useEffect(() => {
+    const lastOrderId = localStorage.getItem("lastOrderId");
+    if (!lastOrderId) {
+      setOrderLoading(false);
+      return;
+    }
+
+    let active = true;
+    fetch(`${API_URL}/orders/${lastOrderId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!active) return;
+        if (data.success && data.order) {
+          if (data.order.paymentStatus === "PAID") {
+            navigate(`/success?transactionId=T${data.order._id}`);
+            return;
+          }
+          setOrderTotal(Number(data.order.totalAmount));
+          localStorage.setItem("lastOrderTotal", String(data.order.totalAmount));
+        } else {
+          addToast("Order not found. Please complete checkout again.", "warning");
+        }
+      })
+      .catch(() => {
+        if (active) addToast("Could not verify order amount from server.", "error");
+      })
+      .finally(() => {
+        if (active) setOrderLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [addToast, navigate]);
 
   const handlePhonePePay = async () => {
     // 1. Get the order that was just created in Checkout
     const lastOrderId = localStorage.getItem("lastOrderId");
+    const token = localStorage.getItem("userToken");
 
     if (!lastOrderId) {
       return addToast("Please complete the checkout step again", "warning");
+    }
+    if (!token) {
+      navigate("/login?redirect=payment");
+      return;
+    }
+    if (!orderTotal || orderTotal <= 0) {
+      return addToast("Invalid order amount. Please return to checkout.", "error");
     }
 
     setLoading(true);
@@ -23,7 +64,8 @@ export default function Payment() {
       const response = await fetch(`${API_URL}/orders/initiate-phonepe`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ orderId: lastOrderId })
       });
@@ -82,8 +124,10 @@ export default function Payment() {
 
           <div className="bg-[#F5F2EB] p-8 rounded-2xl border border-yellow-500/10 mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="text-left font-sans">
-              <p className="text-[10px] text-[#7C786E] uppercase font-black tracking-[0.2em] mb-1">Estimated Invoice</p>
-              <h3 className="text-5xl font-black text-yellow-600 tracking-tighter font-soria">₹{total}</h3>
+              <p className="text-[10px] text-[#7C786E] uppercase font-black tracking-[0.2em] mb-1">Verified Order Total</p>
+              <h3 className="text-5xl font-black text-yellow-600 tracking-tighter font-soria">
+                {orderLoading ? "..." : orderTotal !== null ? `₹${orderTotal}` : "—"}
+              </h3>
             </div>
             <div className="flex flex-col items-center gap-2">
                <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-2xl border border-yellow-500/10 transform transition-transform hover:scale-105 duration-300 shadow-sm">
@@ -96,8 +140,8 @@ export default function Payment() {
 
           <button
             onClick={handlePhonePePay}
-            disabled={loading}
-            className="w-full py-5 bg-gradient-to-r from-indigo-700 to-purple-800 text-white font-black text-xl rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 uppercase tracking-widest flex items-center justify-center gap-4 font-sans"
+            disabled={loading || orderLoading || !orderTotal || orderTotal <= 0}
+            className="w-full py-5 bg-gradient-to-r from-indigo-700 to-purple-800 text-white font-black text-xl rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 uppercase tracking-widest flex items-center justify-center gap-4 font-sans disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (
                 <>
