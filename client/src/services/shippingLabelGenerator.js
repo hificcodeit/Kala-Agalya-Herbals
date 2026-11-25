@@ -41,14 +41,43 @@ function formatItemSummary(items) {
 }
 
 /**
+ * Gracefully wrap address text into lines of up to maxChars at word boundaries
+ */
+function wrapAddressText(text, maxChars = 38) {
+  if (!text) return [];
+  const words = text.trim().split(/\s+/);
+  const lines = [];
+  let current = "";
+
+  for (const word of words) {
+    if (!current) {
+      current = word;
+    } else if ((current + " " + word).length <= maxChars) {
+      current += " " + word;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+/**
  * Parse address fields into clean printable lines and extract pincode
  */
 function parseAddressDetails(order) {
   const customer = order.customer || {};
   const addr = customer.address || {};
-  const lines = [];
+  let lines = [];
   let pincode = "";
 
+  // 1. Direct pincode field if provided
+  if (addr.pincode) {
+    pincode = String(addr.pincode).trim();
+  }
+
+  // 2. Structured address fields (if door, street, etc. exist)
   if (addr.door || addr.street || addr.district) {
     if (addr.door && addr.street) {
       lines.push(`${addr.door}, ${addr.street}`);
@@ -67,21 +96,60 @@ function parseAddressDetails(order) {
       const uniqueLoc = locParts.filter((v, i, a) => a.indexOf(v) === i);
       lines.push(uniqueLoc.join(", "));
     }
+  }
 
-    if (addr.pincode) {
-      pincode = String(addr.pincode).trim();
+  // 3. Unstructured fullAddress (most common in WhatsApp orders)
+  if (lines.length === 0) {
+    let full = "";
+    if (typeof addr === "string") {
+      full = addr.trim();
+    } else if (addr.fullAddress) {
+      full = addr.fullAddress.trim();
+    } else if (order.deliveryAddress) {
+      full = String(order.deliveryAddress).trim();
     }
-  } else if (addr.fullAddress || typeof addr === "string") {
-    const full = (addr.fullAddress || addr || "").trim();
-    const parts = full.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-    parts.forEach((p) => {
-      const pinMatch = p.match(/\b(6\d{5})\b/);
-      if (pinMatch) {
+
+    if (full) {
+      // Find 6-digit Indian pincode (starts with 1-9)
+      const pinMatch = full.match(/\b([1-9]\d{5})\b/);
+      if (pinMatch && !pincode) {
         pincode = pinMatch[1];
-      } else {
-        lines.push(p);
       }
-    });
+
+      // Clean pincode from address text so it's not repeated
+      let cleanedFull = full;
+      if (pincode) {
+        const pinRegex = new RegExp(`[-–\\s,;]*(?:pincode|pin)?\\s*[:#-]?\\s*${pincode}\\b`, "gi");
+        cleanedFull = cleanedFull.replace(pinRegex, "").trim();
+        cleanedFull = cleanedFull.replace(/[-–,\\s]+$/, "").trim();
+      }
+
+      // Split by commas or newlines if present
+      if (cleanedFull.includes("\n") || cleanedFull.includes(",")) {
+        const parts = cleanedFull
+          .split(/[\n,]+/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        parts.forEach((p) => {
+          if (p.length > 40) {
+            lines.push(...wrapAddressText(p, 38));
+          } else if (p.length > 0) {
+            lines.push(p);
+          }
+        });
+      } else {
+        // Continuous line with no commas or newlines (e.g. Rajkumar's address)
+        lines = wrapAddressText(cleanedFull, 38);
+      }
+    }
+  }
+
+  // Safety fallback: If still empty but raw fullAddress string exists, never drop it!
+  if (lines.length === 0) {
+    const raw = typeof addr === "string" ? addr : (addr.fullAddress || "");
+    if (raw) {
+      lines = wrapAddressText(raw, 38);
+    }
   }
 
   return { lines, pincode };
@@ -115,7 +183,7 @@ function renderSingleShippingLabel(order, logoUrl) {
   const { lines, pincode } = parseAddressDetails(order);
 
   const addressHtml = lines
-    .slice(0, 5)
+    .slice(0, 6)
     .map((line) => `<div class="address-line">${escapeHtml(line)}</div>`)
     .join("");
 
