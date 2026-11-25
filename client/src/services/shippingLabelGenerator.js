@@ -1,6 +1,6 @@
-// ─── 152mm x 102mm Thermal Shipping Label Generator (Single Order Layout) ─────
-// Custom-designed for Kala Agalya Herbals thermal parcel sticker printer (152x102mm)
-// Features: Left-corner brand logo, large bold typography, single customer order per sheet
+// ─── 102mm x 152mm Thermal Shipping Label Generator (Portrait Layout) ────────
+// Custom-designed for Kala Agalya Herbals thermal parcel sticker printer (Portrait 102x152mm / 4"x6")
+// Features: Top-left brand logo, bold typography, single customer order per sheet, Portrait default
 
 /**
  * Clean phone number to 10 digits
@@ -102,7 +102,7 @@ function escapeHtml(str) {
 }
 
 /**
- * Render single shipping label HTML card (fills full 152mm x 102mm sheet)
+ * Render single shipping label HTML card (Portrait format: 102mm x 152mm)
  */
 function renderSingleShippingLabel(order, logoUrl) {
   if (!order) {
@@ -116,7 +116,7 @@ function renderSingleShippingLabel(order, logoUrl) {
   const addressLines = parseAddressLines(order);
 
   const addressHtml = addressLines
-    .slice(0, 5) // Keep up to 5 lines for optimal thermal fit
+    .slice(0, 6) // In Portrait (152mm high), we have ample vertical room for up to 6 lines
     .map((line) => {
       const isPin = line.toLowerCase().includes("pincode");
       return `<div class="address-line ${isPin ? "pincode-highlight" : ""}">${escapeHtml(line)}</div>`;
@@ -142,10 +142,12 @@ function renderSingleShippingLabel(order, logoUrl) {
         </div>
       </div>
 
-      <!-- Center Customer Delivery Details (Large, Bold) -->
+      <!-- Center Customer Delivery Details (Large, Bold, Portrait-spaced) -->
       <div class="customer-address">
         <div class="customer-name">${escapeHtml(name)}</div>
-        ${addressHtml}
+        <div class="address-lines-wrapper">
+          ${addressHtml}
+        </div>
         <div class="customer-phone">PH.${phone}</div>
       </div>
 
@@ -173,7 +175,7 @@ function renderSingleShippingLabel(order, logoUrl) {
 }
 
 /**
- * Get CSS styles optimized for 152mm x 102mm single customer thermal label
+ * Get CSS styles optimized for 102mm x 152mm Portrait thermal label
  */
 function getShippingLabelStyles() {
   return `
@@ -181,11 +183,6 @@ function getShippingLabelStyles() {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-    }
-
-    @page {
-      size: 152mm 102mm;
-      margin: 0;
     }
 
     body {
@@ -226,10 +223,10 @@ function getShippingLabelStyles() {
       align-items: center;
       flex-wrap: wrap;
     }
-    .size-controls {
+    .pill-group {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       background: #2a2416;
       padding: 3px 6px;
       border-radius: 8px;
@@ -238,7 +235,7 @@ function getShippingLabelStyles() {
       font-size: 11px;
       font-weight: 700;
     }
-    .size-btn {
+    .pill-btn {
       cursor: pointer;
       padding: 4px 10px;
       border-radius: 6px;
@@ -249,10 +246,10 @@ function getShippingLabelStyles() {
       color: #fbbf24;
       transition: all 0.15s ease;
     }
-    .size-btn:hover {
+    .pill-btn:hover {
       background: #3a3220;
     }
-    .size-btn.active {
+    .pill-btn.active {
       background: #fbbf24;
       color: #000000;
     }
@@ -297,13 +294,13 @@ function getShippingLabelStyles() {
       gap: 25px;
     }
 
-    /* Each 152mm x 102mm Thermal Sheet Container */
+    /* ─── DEFAULT: PORTRAIT Container (102mm wide x 152mm high) ─── */
     .label-sheet {
-      width: 152mm;
-      height: 102mm;
+      width: 102mm;
+      height: 152mm;
       background: #ffffff;
       box-sizing: border-box;
-      padding: 5mm 7mm;
+      padding: 5.5mm 6mm;
       overflow: hidden;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
       border-radius: 4px;
@@ -312,6 +309,14 @@ function getShippingLabelStyles() {
       position: relative;
       display: flex;
       flex-direction: column;
+      transition: width 0.2s ease, height 0.2s ease;
+    }
+
+    /* Landscape Mode Switcher Override */
+    body.orientation-landscape .label-sheet {
+      width: 152mm;
+      height: 102mm;
+      padding: 4.5mm 6.5mm;
     }
 
     .single-label {
@@ -329,20 +334,20 @@ function getShippingLabelStyles() {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 2mm;
+      padding-bottom: 2.5mm;
       border-bottom: 1.5px solid #000000;
-      margin-bottom: 2mm;
+      margin-bottom: 2.5mm;
     }
 
     .header-left {
       display: flex;
       align-items: center;
-      gap: 3.5mm;
+      gap: 3mm;
     }
 
     .brand-logo {
-      width: 24mm;
-      height: 24mm;
+      width: 22mm;
+      height: 22mm;
       object-fit: contain;
       flex-shrink: 0;
       border-radius: 4px;
@@ -351,6 +356,14 @@ function getShippingLabelStyles() {
     .to-wrapper {
       display: flex;
       align-items: center;
+    }
+
+    .to-text {
+      font-size: 24pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      line-height: 1;
+      color: #000000;
     }
 
     .header-right {
@@ -364,43 +377,69 @@ function getShippingLabelStyles() {
       align-items: center;
       border: 2px solid #000000;
       border-radius: 4px;
-      padding: 1.5mm 3.5mm;
+      padding: 1.5mm 3mm;
       background: #ffffff;
-      max-width: 85mm;
+      max-width: 52mm;
     }
 
-    /* ─── Center: Customer Delivery Info ──────────────── */
+    .product-summary {
+      font-size: 16pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.1;
+      color: #000000;
+      word-break: break-word;
+      text-align: right;
+    }
+
+    /* ─── Center: Customer Delivery Info (Generous Vertical Spacing in Portrait) ── */
     .customer-address {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      margin-top: 1mm;
+      margin-top: 2mm;
       margin-bottom: 2mm;
       overflow: hidden;
     }
 
     .customer-name {
+      font-size: 20pt;
+      font-weight: 900;
       line-height: 1.2;
-      margin-bottom: 1.5mm;
+      margin-bottom: 2.5mm;
       color: #000000;
       word-break: break-word;
       text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .address-lines-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5mm;
     }
 
     .address-line {
-      line-height: 1.32;
+      font-size: 14pt;
+      font-weight: 600;
+      line-height: 1.35;
       color: #000000;
       word-break: break-word;
     }
 
     .pincode-highlight {
+      font-size: 16pt;
       font-weight: 900;
+      margin-top: 0.5mm;
     }
 
     .customer-phone {
+      font-size: 18pt;
+      font-weight: 900;
       line-height: 1.2;
-      margin-top: 2mm;
+      margin-top: 3mm;
       letter-spacing: 0.5px;
       color: #000000;
     }
@@ -410,7 +449,7 @@ function getShippingLabelStyles() {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      padding-top: 2mm;
+      padding-top: 2.5mm;
       border-top: 1.5px solid #000000;
       margin-top: auto;
     }
@@ -420,18 +459,26 @@ function getShippingLabelStyles() {
     }
 
     .from-label {
+      font-size: 11pt;
+      font-weight: 800;
       color: #000000;
     }
 
     .from-name {
+      font-size: 12.5pt;
+      font-weight: 900;
       color: #000000;
     }
 
     .from-address {
+      font-size: 11pt;
+      font-weight: 600;
       color: #000000;
     }
 
     .from-cell {
+      font-size: 11.5pt;
+      font-weight: 800;
       color: #000000;
     }
 
@@ -456,79 +503,38 @@ function getShippingLabelStyles() {
 
     /* ─── Default Text Sizes: LARGE (Increased for Clarity) ── */
     body, body.size-large {
-      .to-text {
-        font-size: 26pt;
-        font-weight: 900;
-        letter-spacing: 1px;
-        line-height: 1;
-      }
-      .product-summary {
-        font-size: 18pt;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        line-height: 1.1;
-      }
-      .customer-name {
-        font-size: 19pt;
-        font-weight: 900;
-      }
-      .address-line {
-        font-size: 14pt;
-        font-weight: 600;
-      }
-      .pincode-highlight {
-        font-size: 15pt;
-        font-weight: 900;
-      }
-      .customer-phone {
-        font-size: 18pt;
-        font-weight: 900;
-      }
-      .from-label {
-        font-size: 11pt;
-        font-weight: 800;
-      }
-      .from-name {
-        font-size: 12.5pt;
-        font-weight: 900;
-      }
-      .from-address {
-        font-size: 11.5pt;
-        font-weight: 600;
-      }
-      .from-cell {
-        font-size: 12pt;
-        font-weight: 800;
-      }
+      .to-text { font-size: 24pt; }
+      .product-summary { font-size: 16pt; }
+      .customer-name { font-size: 20pt; }
+      .address-line { font-size: 14pt; }
+      .pincode-highlight { font-size: 16pt; }
+      .customer-phone { font-size: 18pt; }
+      .from-name { font-size: 12.5pt; }
+      .from-cell { font-size: 11.5pt; }
     }
 
     /* Extra Large Option */
     body.size-xl {
-      .to-text { font-size: 28pt; }
-      .product-summary { font-size: 20pt; }
-      .customer-name { font-size: 21pt; }
+      .to-text { font-size: 26pt; }
+      .product-summary { font-size: 18pt; }
+      .customer-name { font-size: 22pt; }
       .address-line { font-size: 15pt; }
-      .pincode-highlight { font-size: 16pt; }
-      .customer-phone { font-size: 19.5pt; }
-      .from-label { font-size: 11.5pt; }
+      .pincode-highlight { font-size: 17pt; }
+      .customer-phone { font-size: 20pt; }
       .from-name { font-size: 13.5pt; }
-      .from-address { font-size: 12pt; }
       .from-cell { font-size: 12.5pt; }
     }
 
-    /* Normal Option (for super-dense addresses) */
+    /* Normal Option */
     body.size-normal {
-      .to-text { font-size: 22pt; }
-      .product-summary { font-size: 15pt; }
-      .customer-name { font-size: 16pt; }
-      .address-line { font-size: 12pt; }
-      .pincode-highlight { font-size: 13pt; }
-      .customer-phone { font-size: 15pt; }
-      .from-label { font-size: 10pt; }
+      .to-text { font-size: 20pt; }
+      .product-summary { font-size: 14pt; }
+      .customer-name { font-size: 17pt; }
+      .address-line { font-size: 12.5pt; }
+      .pincode-highlight { font-size: 14pt; }
+      .customer-phone { font-size: 15.5pt; }
       .from-name { font-size: 11pt; }
-      .from-address { font-size: 10.5pt; }
-      .from-cell { font-size: 11pt; }
+      .from-cell { font-size: 10.5pt; }
     }
 
     /* ─── PRINT RULES ────────────────────────────────── */
@@ -572,7 +578,7 @@ export function generateShippingLabelsHTML(orders, logoUrl) {
       ? `${window.location.origin}/images/icons/logo.png`
       : "/images/icons/logo.png");
 
-  // Each order occupies its own full 152mm x 102mm sheet (Single Customer Order)
+  // Each order occupies its own full Portrait sheet (102mm x 152mm)
   const sheetsHtml = orderList
     .map(
       (order) => `
@@ -588,27 +594,42 @@ export function generateShippingLabelsHTML(orders, logoUrl) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shipping Labels (${orderList.length} Order${orderList.length > 1 ? "s" : ""} - 152x102mm) | Kala Agalya Herbals</title>
+  <title>Shipping Labels (${orderList.length} Order${orderList.length > 1 ? "s" : ""} - 102x152mm Portrait) | Kala Agalya Herbals</title>
+  <style id="dynamic-page-style">
+    @page {
+      size: 102mm 152mm portrait;
+      margin: 0;
+    }
+  </style>
   <style>
     ${getShippingLabelStyles()}
   </style>
 </head>
-<body class="size-large">
+<body class="orientation-portrait size-large">
 
   <!-- Screen Action Floating Bar (Hidden during Print) -->
   <div class="screen-actions no-print">
     <div class="left-info">
       <span>📦 Kala Agalya Herbals</span>
       <span>•</span>
-      <span>Shipping Labels: ${orderList.length} Order${orderList.length > 1 ? "s" : ""} (${orderList.length} Sheet${orderList.length > 1 ? "s" : ""} @ 152×102mm - Single Customer per Sheet)</span>
+      <span id="sheet-info-text">Shipping Labels: ${orderList.length} Order${orderList.length > 1 ? "s" : ""} (${orderList.length} Sheet${orderList.length > 1 ? "s" : ""} @ 102×152mm Portrait)</span>
     </div>
     <div class="btn-group">
-      <div class="size-controls">
-        <span>Text Size:</span>
-        <button type="button" class="size-btn" onclick="setSize('size-normal', this)">Normal</button>
-        <button type="button" class="size-btn active" onclick="setSize('size-large', this)">Large (Default)</button>
-        <button type="button" class="size-btn" onclick="setSize('size-xl', this)">Extra Large</button>
+      <!-- Orientation Toggle (Portrait default vs Landscape) -->
+      <div class="pill-group">
+        <span>Orientation:</span>
+        <button type="button" class="pill-btn orient-btn active" onclick="setOrientation('portrait', this)">📄 Portrait (102×152mm)</button>
+        <button type="button" class="pill-btn orient-btn" onclick="setOrientation('landscape', this)">📄 Landscape (152×102mm)</button>
       </div>
+
+      <!-- Text Size Selector -->
+      <div class="pill-group">
+        <span>Text Size:</span>
+        <button type="button" class="pill-btn size-btn" onclick="setSize('size-normal', this)">Normal</button>
+        <button type="button" class="pill-btn size-btn active" onclick="setSize('size-large', this)">Large (Default)</button>
+        <button type="button" class="pill-btn size-btn" onclick="setSize('size-xl', this)">Extra Large</button>
+      </div>
+
       <button class="action-btn btn-close" onclick="window.close()">✕ Close</button>
       <button class="action-btn btn-print" onclick="window.print()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
@@ -622,8 +643,34 @@ export function generateShippingLabelsHTML(orders, logoUrl) {
   </div>
 
   <script>
+    function setOrientation(orientation, btnEl) {
+      const pageStyle = document.getElementById('dynamic-page-style');
+      const infoText = document.getElementById('sheet-info-text');
+      const totalCount = ${orderList.length};
+
+      if (orientation === 'landscape') {
+        pageStyle.innerHTML = '@page { size: 152mm 102mm landscape; margin: 0; }';
+        document.body.classList.remove('orientation-portrait');
+        document.body.classList.add('orientation-landscape');
+        if (infoText) {
+          infoText.innerText = 'Shipping Labels: ' + totalCount + ' Order' + (totalCount > 1 ? 's' : '') + ' (' + totalCount + ' Sheet' + (totalCount > 1 ? 's' : '') + ' @ 152×102mm Landscape)';
+        }
+      } else {
+        pageStyle.innerHTML = '@page { size: 102mm 152mm portrait; margin: 0; }';
+        document.body.classList.remove('orientation-landscape');
+        document.body.classList.add('orientation-portrait');
+        if (infoText) {
+          infoText.innerText = 'Shipping Labels: ' + totalCount + ' Order' + (totalCount > 1 ? 's' : '') + ' (' + totalCount + ' Sheet' + (totalCount > 1 ? 's' : '') + ' @ 102×152mm Portrait)';
+        }
+      }
+
+      document.querySelectorAll('.orient-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+    }
+
     function setSize(sizeClass, btnEl) {
-      document.body.className = sizeClass;
+      document.body.classList.remove('size-normal', 'size-large', 'size-xl');
+      document.body.classList.add(sizeClass);
       document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
       if (btnEl) btnEl.classList.add('active');
     }
