@@ -41,6 +41,7 @@ import { ReactLenis } from "@studio-freight/react-lenis";
 import useScrollAnimation from "./hooks/useScrollAnimation";
 import { LanguageProvider } from "./context/LanguageContext";
 import LanguageSelectorModal from "./components/LanguageSelectorModal";
+import ChatbotWidget from "./components/ChatbotWidget";
 
 /* ── Global cursor + scroll-progress bar ─────────────── */
 function useGlobalEffects() {
@@ -169,6 +170,7 @@ function Layout() {
         </Routes>
       </main>
       {(!isAdminRoute && !isAuthRoute && !isInvoiceRoute) && <Footer />}
+      {(!isAdminRoute && !isInvoiceRoute) && <ChatbotWidget />}
     </>
   );
 }
