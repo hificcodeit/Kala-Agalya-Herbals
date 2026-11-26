@@ -4,18 +4,23 @@ const Product = require("../models/Product");
 const Order = require("../models/Order");
 const WhatsAppOrder = require("../models/WhatsAppOrder");
 const Query = require("../models/Query");
-const { getShippingAmount } = require("../utils/orderPricing");
+const cache = require("../utils/cache");
 
+const PRODUCTS_PROMPT_CACHE_KEY = "chatbot_products_summary";
+const PRODUCTS_PROMPT_TTL = 300; // 5 minutes
+
+// Ordered fastest/most reliable first; avoids 404/503 retries where possible
 const DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
-  "gemini-3.8-flash",
-  "gemini-3-flash-preview",
   "gemini-3.5-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
   "gemini-flash-latest"
 ].filter(Boolean);
 
 const STORE_KNOWLEDGE = `
-You are "Agalya", the friendly, knowledgeable AI Customer Support Assistant for **Kala Agalya Herbals**.
+You are "Agalya", the friendly, fast AI Customer Support Assistant for **Kala Agalya Herbals**.
 
 ### Brand & Store Information
 - **Brand:** Kala Agalya Herbals — 100% Naturopathy & Organic Herbal Hair Oil, founded in Chennai by herbalist Kala Agalya (women-led, Made in India, cruelty-free).
@@ -25,14 +30,15 @@ You are "Agalya", the friendly, knowledgeable AI Customer Support Assistant for 
 - **Email:** kalaagalyaherbals@gmail.com
 - **Key Ingredients (18+ rare herbs in pure coconut oil):** Amla (strengthens roots), Hibiscus (prevents hair fall), Aloe Vera (natural conditioner), Neem (dandruff control), Coconut Oil (deep nourishment), Vetiver (cooling effect), Fenugreek (prevents shedding), Henna (natural conditioning/color), Curry Leaves (rich in iron), Black Cumin (anti-inflammatory), Rose Petals (scalp soothing), Pearl Onion (growth booster), False Daisy / Bhringraj (rejuvenation), Rosemary (circulation), Tanner's Cassia (antibacterial).
 - **Chemical-Free Promise:** Zero parabens, sulfates, mineral oils, artificial fragrances, or preservatives.
-- **How to Use:** Gently massage a small amount into the scalp and hair roots with fingertips for 5–10 minutes. Leave it on for at least 30–60 minutes (or overnight) before washing with a mild/herbal cleanser. Always do a small patch test before first use if you have sensitive skin.
+- **How to Use:** Gently massage a small amount into the scalp and hair roots with fingertips for 5–10 minutes. Leave on for at least 30–60 minutes (or overnight) before washing with a mild/herbal cleanser. Always do a small patch test before first use if you have sensitive skin.
 - **Medical Disclaimer:** For severe medical scalp conditions (e.g., alopecia, psoriasis, fungal infection, or open wounds), advise consulting a dermatologist or doctor.
 
-### Shipping & Delivery Policy
-- **Coverage:** Pan-India delivery across almost every pin code.
-- **Processing Time:** Orders are processed within 1–3 business days.
-- **Estimated Delivery:** Metro cities: 3–5 business days; Rest of India: 5–10 business days (may vary due to weather or courier delays).
-- **Shipping Charges:** Calculated by state (use the \`calculate_shipping\` tool whenever a user asks for shipping cost to a state/city).
+### Shipping Charges & Delivery Policy (Official Rates)
+- **Tamil Nadu:** ₹30 (Estimated 2–4 business days)
+- **Puducherry:** ₹40 (Estimated 3–5 business days)
+- **South India (Andhra Pradesh, Telangana, Kerala, Karnataka):** ₹75 (Estimated 3–6 business days)
+- **Rest of India (all other states & UTs):** ₹165 (Estimated 5–10 business days)
+- **Processing Time:** Orders are processed within 1–3 business days. Pan-India delivery across almost every pin code.
 - **Payments:** Online payment via PhonePe (UPI, cards, netbanking) at checkout, plus WhatsApp ordering support.
 
 ### Refund & Return Policy
@@ -42,39 +48,16 @@ You are "Agalya", the friendly, knowledgeable AI Customer Support Assistant for 
 - **How to Request:** Contact us via WhatsApp/Phone (+91 7338758727), email (kalaagalyaherbals@gmail.com), or submit a support ticket in this chat.
 
 ### Assistant Rules
-1. Always call \`get_products\` when asked about products, prices, sizes, offers, or stock — never guess prices.
-2. Always call \`calculate_shipping\` when asked about shipping fees for a specific Indian state (if they name a city like Madurai/Mumbai/Bangalore, infer the state and pass the official state name).
-3. For order status/tracking:
+1. Answer product, price, stock, ingredient, shipping, and policy questions directly using the Live Store Catalog and Shipping Rates provided in this prompt (no extra tool wait needed).
+2. For order status/tracking:
    - Call \`track_order\`.
-   - If the customer is NOT logged in, ask for **both** their Order ID (8-digit or transaction ID) AND their registered 10-digit phone number or email before sharing order status. Never fabricate order data or expose full street addresses.
-4. If the customer wants a callback, wants to report a damaged/missing parcel, asks for bulk/wholesale pricing, or has a question you cannot resolve, offer to create a support ticket using \`submit_support_query\` (collect Name, 10-digit Phone, optional Email, and Message).
-5. Stay strictly focused on Kala Agalya Herbals, hair care, orders, and store policies. Politely decline unrelated topics (e.g., coding, politics, general trivia).
-6. Keep answers clear, warm, concise, and structured with short bullet points when helpful.
+   - If the customer is NOT logged in, ask for **both** their Order ID (8-digit or invoice/transaction ID) AND their registered 10-digit phone number or email before sharing order status. Never fabricate order data or expose full street addresses.
+3. If the customer wants a callback, wants to report a damaged/missing parcel, asks for bulk/wholesale pricing, or has an unresolved issue, offer to create a support ticket using \`submit_support_query\` (collect Name, 10-digit Phone, optional Email, and Message).
+4. Stay strictly focused on Kala Agalya Herbals, hair care, orders, and store policies. Politely decline unrelated topics (e.g., coding, politics, general trivia).
+5. Keep answers concise, warm, and easy to scan (use short bullet points when listing prices, steps, or policies).
 `;
 
 const toolDeclarations = [
-  {
-    name: "get_products",
-    description: "Fetch active Kala Agalya Herbals products, available pack sizes, MRP, selling price, offer price, and stock availability from the live database.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {}
-    }
-  },
-  {
-    name: "calculate_shipping",
-    description: "Calculate the official shipping charge in INR and estimated delivery days for an Indian state.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        state: {
-          type: Type.STRING,
-          description: "Official Indian state or union territory name, e.g. 'Tamil Nadu', 'Maharashtra', 'Karnataka', 'Delhi'."
-        }
-      },
-      required: ["state"]
-    }
-  },
   {
     name: "track_order",
     description: "Look up customer order status, payment status, items, and courier tracking details. For logged-in users, orderId is optional (returns recent orders if omitted). For guests, both orderId and phoneOrEmail verification are required.",
@@ -132,53 +115,45 @@ function normalizePhone(val) {
   return String(val || "").replace(/\D/g, "").slice(-10);
 }
 
+async function getLiveCatalogText() {
+  const cached = cache.get(PRODUCTS_PROMPT_CACHE_KEY);
+  if (cached) return cached;
+
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return "Catalog fallback: 100 ml (₹199, MRP ₹249), 200 ml (₹349, MRP ₹449), 500 ml (₹799, MRP ₹999).";
+    }
+    const products = await Product.find({ isActive: { $ne: false } })
+      .sort({ createdAt: -1 })
+      .select("name description category sizes")
+      .lean();
+
+    if (!products.length) {
+      return "No active products found right now.";
+    }
+
+    const lines = products.map((p) => {
+      const sizeText = (p.sizes || [])
+        .map((s) => {
+          const eff = s.offerPrice && s.offerPrice > 0 ? s.offerPrice : s.price;
+          const mrpPart = s.mrp ? ` (MRP ₹${s.mrp})` : "";
+          const stockPart = (s.stock ?? 0) > 0 ? "In Stock" : "Out of Stock";
+          return `${s.size}: ₹${eff}${mrpPart} [${stockPart}]`;
+        })
+        .join(" | ");
+      return `- **${p.name}** (${p.category || "Hair Oil"}): ${sizeText}. ${p.description ? p.description.slice(0, 160) : ""}`;
+    });
+
+    const summary = lines.join("\n");
+    cache.set(PRODUCTS_PROMPT_CACHE_KEY, summary, PRODUCTS_PROMPT_TTL);
+    return summary;
+  } catch {
+    return "Catalog fallback: 100 ml (₹199, MRP ₹249), 200 ml (₹349, MRP ₹449), 500 ml (₹799, MRP ₹999).";
+  }
+}
+
 async function executeTool(name, args = {}, authUser = null) {
   switch (name) {
-    case "get_products": {
-      const products = await Product.find({ isActive: { $ne: false } })
-        .sort({ createdAt: -1 })
-        .select("name description category sizes")
-        .lean();
-
-      return {
-        count: products.length,
-        products: products.map((p) => ({
-          name: p.name,
-          category: p.category,
-          description: p.description,
-          sizes: (p.sizes || []).map((s) => ({
-            size: s.size,
-            mrp: s.mrp,
-            price: s.price,
-            offerPrice: s.offerPrice,
-            effectivePrice: s.offerPrice && s.offerPrice > 0 ? s.offerPrice : s.price,
-            inStock: (s.stock ?? 0) > 0,
-            stock: s.stock ?? 0
-          }))
-        }))
-      };
-    }
-
-    case "calculate_shipping": {
-      try {
-        const state = String(args.state || "").trim();
-        const shippingAmount = getShippingAmount(state);
-        const isTN = state.toLowerCase() === "tamil nadu";
-        return {
-          success: true,
-          state,
-          shippingAmount,
-          currency: "INR",
-          estimatedDelivery: isTN ? "2-4 business days" : "3-10 business days"
-        };
-      } catch (err) {
-        return {
-          success: false,
-          error: err.message
-        };
-      }
-    }
-
     case "track_order": {
       const rawOrderId = String(args.orderId || "").trim().replace(/^#/, "");
       const cleanOrderId = rawOrderId.startsWith("T") ? rawOrderId.slice(1) : rawOrderId;
@@ -300,26 +275,26 @@ async function executeTool(name, args = {}, authUser = null) {
   }
 }
 
-function buildSystemInstruction(language, authUser) {
+function buildSystemInstruction(language, authUser, catalogText) {
   const langLine = language && language.toLowerCase() !== "english"
-    ? `\n### Language Preference\nThe customer's storefront language is set to **${language}**. Reply in **${language}** unless the customer writes to you in English or another language — always match the language of their latest message naturally.`
+    ? `\n### Language Preference\nThe customer's storefront language is set to **${language}**. Reply in **${language}** unless the customer writes in another language — always match their latest message language naturally.`
     : "\n### Language Preference\nReply in the same language the customer uses (English, Tamil, Hindi, Telugu, Kannada, Malayalam, etc.).";
 
   const authLine = authUser
-    ? `\n### Session Context\nThe customer is currently logged in as **${authUser.name || "Customer"}** (${authUser.email}). You can look up their recent orders with \`track_order\` without asking for extra verification.`
+    ? `\n### Session Context\nThe customer is logged in as **${authUser.name || "Customer"}** (${authUser.email}). You can look up their recent orders with \`track_order\` without extra verification.`
     : "\n### Session Context\nThe customer is browsing as a guest (not logged in).";
 
-  return `${STORE_KNOWLEDGE}${langLine}${authLine}`;
+  return `${STORE_KNOWLEDGE}\n### Live Store Catalog\n${catalogText}${langLine}${authLine}`;
 }
 
 function sanitizeHistory(history) {
   if (!Array.isArray(history)) return [];
   return history
-    .slice(-10)
+    .slice(-8)
     .filter((m) => m && typeof m.text === "string" && m.text.trim() && (m.role === "user" || m.role === "model"))
     .map((m) => ({
       role: m.role,
-      parts: [{ text: m.text.trim().slice(0, 1500) }]
+      parts: [{ text: m.text.trim().slice(0, 1200) }]
     }));
 }
 
@@ -327,17 +302,22 @@ async function generateWithFallback(ai, contents, config) {
   let lastError;
   for (const model of DEFAULT_MODELS) {
     try {
-      return await ai.models.generateContent({ model, contents, config });
+      const perAttemptConfig = {
+        ...config,
+        abortSignal: AbortSignal.timeout(12000)
+      };
+      return await ai.models.generateContent({ model, contents, config: perAttemptConfig });
     } catch (err) {
       lastError = err;
       const msg = String(err?.message || "");
       const status = err?.status || err?.statusCode;
-      // Try next fallback model if the model is unavailable, overloaded, or rate-limited
       if (
+        err?.name === "TimeoutError" ||
+        err?.name === "AbortError" ||
         status === 404 ||
         status === 429 ||
         status === 503 ||
-        /not found|not supported|unknown model|UNAVAILABLE|high demand|overloaded|RESOURCE_EXHAUSTED/i.test(msg)
+        /not found|not supported|unknown model|UNAVAILABLE|high demand|overloaded|RESOURCE_EXHAUSTED|timeout|aborted/i.test(msg)
       ) {
         continue;
       }
@@ -348,7 +328,7 @@ async function generateWithFallback(ai, contents, config) {
 }
 
 exports.generateChatReply = async ({ message, history = [], language = "English", user = null }) => {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const apiKey = (process.env.GEMINI_API_KEY || process.env.GEMINI_API_Key || "").trim();
   if (!apiKey) {
     const err = new Error("GEMINI_API_KEY is not configured on the server.");
     err.statusCode = 503;
@@ -356,23 +336,23 @@ exports.generateChatReply = async ({ message, history = [], language = "English"
   }
 
   const ai = new GoogleGenAI({ apiKey });
+  const catalogText = await getLiveCatalogText();
   const contents = [
     ...sanitizeHistory(history),
     { role: "user", parts: [{ text: message.trim() }] }
   ];
 
   const config = {
-    systemInstruction: buildSystemInstruction(language, user),
-    temperature: 0.4,
-    maxOutputTokens: 700,
+    systemInstruction: buildSystemInstruction(language, user, catalogText),
+    temperature: 0.35,
+    maxOutputTokens: 550,
     tools: [{ functionDeclarations: toolDeclarations }]
   };
 
   const toolsUsed = [];
   let response = await generateWithFallback(ai, contents, config);
 
-  // Execute tool calls up to 4 rounds
-  for (let round = 0; round < 4; round++) {
+  for (let round = 0; round < 3; round++) {
     const calls = response.functionCalls;
     if (!calls || calls.length === 0) break;
 

@@ -23,9 +23,10 @@ async function resolveOptionalUser(req) {
 }
 
 exports.chatHealth = (req, res) => {
+  const key = process.env.GEMINI_API_KEY || process.env.GEMINI_API_Key;
   res.json({
     success: true,
-    configured: Boolean(process.env.GEMINI_API_KEY?.trim())
+    configured: Boolean(key && key.trim())
   });
 };
 
